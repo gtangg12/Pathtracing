@@ -1,0 +1,6 @@
+cmake_minimum_required(VERSION 2.8)
+project( interface )
+find_package( OpenCV REQUIRED )
+include_directories( ${OpenCV_INCLUDE_DIRS} )
+add_executable( interface interface.cpp )
+target_link_libraries( interface ${OpenCV_LIBS} )
