@@ -54,45 +54,45 @@ RM = /Library/Frameworks/Python.framework/Versions/3.6/lib/python3.6/site-packag
 EQUALS = =
 
 # The top-level source directory on which CMake was run.
-CMAKE_SOURCE_DIR = /Users/mmreed/Documents/CS/VR
+CMAKE_SOURCE_DIR = /Users/mmreed/Documents/CS/Raytrace
 
 # The top-level build directory on which CMake was run.
-CMAKE_BINARY_DIR = /Users/mmreed/Documents/CS/VR
+CMAKE_BINARY_DIR = /Users/mmreed/Documents/CS/Raytrace
 
 #=============================================================================
-# Target rules for target CMakeFiles/interface.dir
+# Target rules for target CMakeFiles/main.dir
 
 # All Build rule for target.
-CMakeFiles/interface.dir/all:
-	$(MAKE) -f CMakeFiles/interface.dir/build.make CMakeFiles/interface.dir/depend
-	$(MAKE) -f CMakeFiles/interface.dir/build.make CMakeFiles/interface.dir/build
-	@$(CMAKE_COMMAND) -E cmake_echo_color --switch=$(COLOR) --progress-dir=/Users/mmreed/Documents/CS/VR/CMakeFiles --progress-num=1,2 "Built target interface"
-.PHONY : CMakeFiles/interface.dir/all
+CMakeFiles/main.dir/all:
+	$(MAKE) -f CMakeFiles/main.dir/build.make CMakeFiles/main.dir/depend
+	$(MAKE) -f CMakeFiles/main.dir/build.make CMakeFiles/main.dir/build
+	@$(CMAKE_COMMAND) -E cmake_echo_color --switch=$(COLOR) --progress-dir=/Users/mmreed/Documents/CS/Raytrace/CMakeFiles --progress-num=1,2 "Built target main"
+.PHONY : CMakeFiles/main.dir/all
 
 # Include target in all.
-all: CMakeFiles/interface.dir/all
+all: CMakeFiles/main.dir/all
 
 .PHONY : all
 
 # Build rule for subdir invocation for target.
-CMakeFiles/interface.dir/rule: cmake_check_build_system
-	$(CMAKE_COMMAND) -E cmake_progress_start /Users/mmreed/Documents/CS/VR/CMakeFiles 2
-	$(MAKE) -f CMakeFiles/Makefile2 CMakeFiles/interface.dir/all
-	$(CMAKE_COMMAND) -E cmake_progress_start /Users/mmreed/Documents/CS/VR/CMakeFiles 0
-.PHONY : CMakeFiles/interface.dir/rule
+CMakeFiles/main.dir/rule: cmake_check_build_system
+	$(CMAKE_COMMAND) -E cmake_progress_start /Users/mmreed/Documents/CS/Raytrace/CMakeFiles 2
+	$(MAKE) -f CMakeFiles/Makefile2 CMakeFiles/main.dir/all
+	$(CMAKE_COMMAND) -E cmake_progress_start /Users/mmreed/Documents/CS/Raytrace/CMakeFiles 0
+.PHONY : CMakeFiles/main.dir/rule
 
 # Convenience name for target.
-interface: CMakeFiles/interface.dir/rule
+main: CMakeFiles/main.dir/rule
 
-.PHONY : interface
-
-# clean rule for target.
-CMakeFiles/interface.dir/clean:
-	$(MAKE) -f CMakeFiles/interface.dir/build.make CMakeFiles/interface.dir/clean
-.PHONY : CMakeFiles/interface.dir/clean
+.PHONY : main
 
 # clean rule for target.
-clean: CMakeFiles/interface.dir/clean
+CMakeFiles/main.dir/clean:
+	$(MAKE) -f CMakeFiles/main.dir/build.make CMakeFiles/main.dir/clean
+.PHONY : CMakeFiles/main.dir/clean
+
+# clean rule for target.
+clean: CMakeFiles/main.dir/clean
 
 .PHONY : clean
 

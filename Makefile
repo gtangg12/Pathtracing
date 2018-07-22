@@ -48,10 +48,10 @@ RM = /Library/Frameworks/Python.framework/Versions/3.6/lib/python3.6/site-packag
 EQUALS = =
 
 # The top-level source directory on which CMake was run.
-CMAKE_SOURCE_DIR = /Users/mmreed/Documents/CS/VR
+CMAKE_SOURCE_DIR = /Users/mmreed/Documents/CS/Raytrace
 
 # The top-level build directory on which CMake was run.
-CMAKE_BINARY_DIR = /Users/mmreed/Documents/CS/VR
+CMAKE_BINARY_DIR = /Users/mmreed/Documents/CS/Raytrace
 
 #=============================================================================
 # Targets provided globally by CMake.
@@ -80,9 +80,9 @@ edit_cache/fast: edit_cache
 
 # The main all target
 all: cmake_check_build_system
-	$(CMAKE_COMMAND) -E cmake_progress_start /Users/mmreed/Documents/CS/VR/CMakeFiles /Users/mmreed/Documents/CS/VR/CMakeFiles/progress.marks
+	$(CMAKE_COMMAND) -E cmake_progress_start /Users/mmreed/Documents/CS/Raytrace/CMakeFiles /Users/mmreed/Documents/CS/Raytrace/CMakeFiles/progress.marks
 	$(MAKE) -f CMakeFiles/Makefile2 all
-	$(CMAKE_COMMAND) -E cmake_progress_start /Users/mmreed/Documents/CS/VR/CMakeFiles 0
+	$(CMAKE_COMMAND) -E cmake_progress_start /Users/mmreed/Documents/CS/Raytrace/CMakeFiles 0
 .PHONY : all
 
 # The main clean target
@@ -111,44 +111,44 @@ depend:
 .PHONY : depend
 
 #=============================================================================
-# Target rules for targets named interface
+# Target rules for targets named main
 
 # Build rule for target.
-interface: cmake_check_build_system
-	$(MAKE) -f CMakeFiles/Makefile2 interface
-.PHONY : interface
+main: cmake_check_build_system
+	$(MAKE) -f CMakeFiles/Makefile2 main
+.PHONY : main
 
 # fast build rule for target.
-interface/fast:
-	$(MAKE) -f CMakeFiles/interface.dir/build.make CMakeFiles/interface.dir/build
-.PHONY : interface/fast
+main/fast:
+	$(MAKE) -f CMakeFiles/main.dir/build.make CMakeFiles/main.dir/build
+.PHONY : main/fast
 
-interface.o: interface.cpp.o
+main.o: main.cpp.o
 
-.PHONY : interface.o
+.PHONY : main.o
 
 # target to build an object file
-interface.cpp.o:
-	$(MAKE) -f CMakeFiles/interface.dir/build.make CMakeFiles/interface.dir/interface.cpp.o
-.PHONY : interface.cpp.o
+main.cpp.o:
+	$(MAKE) -f CMakeFiles/main.dir/build.make CMakeFiles/main.dir/main.cpp.o
+.PHONY : main.cpp.o
 
-interface.i: interface.cpp.i
+main.i: main.cpp.i
 
-.PHONY : interface.i
+.PHONY : main.i
 
 # target to preprocess a source file
-interface.cpp.i:
-	$(MAKE) -f CMakeFiles/interface.dir/build.make CMakeFiles/interface.dir/interface.cpp.i
-.PHONY : interface.cpp.i
+main.cpp.i:
+	$(MAKE) -f CMakeFiles/main.dir/build.make CMakeFiles/main.dir/main.cpp.i
+.PHONY : main.cpp.i
 
-interface.s: interface.cpp.s
+main.s: main.cpp.s
 
-.PHONY : interface.s
+.PHONY : main.s
 
 # target to generate assembly for a file
-interface.cpp.s:
-	$(MAKE) -f CMakeFiles/interface.dir/build.make CMakeFiles/interface.dir/interface.cpp.s
-.PHONY : interface.cpp.s
+main.cpp.s:
+	$(MAKE) -f CMakeFiles/main.dir/build.make CMakeFiles/main.dir/main.cpp.s
+.PHONY : main.cpp.s
 
 # Help Target
 help:
@@ -158,10 +158,10 @@ help:
 	@echo "... depend"
 	@echo "... rebuild_cache"
 	@echo "... edit_cache"
-	@echo "... interface"
-	@echo "... interface.o"
-	@echo "... interface.i"
-	@echo "... interface.s"
+	@echo "... main"
+	@echo "... main.o"
+	@echo "... main.i"
+	@echo "... main.s"
 .PHONY : help
 
 
