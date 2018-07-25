@@ -66,8 +66,16 @@ template<typename T> Vec3<T> operator*(const T k, const Vec3<T> &u) {
    return Vec3<T>(k*u.x, k*u.y, k*u.z);
 }
 
+template<typename T> Vec3<T> operator*(const Vec3<T> &u, const Vec3<T> &v) {
+   return Vec3<T>(u.x*v.x, u.y*v.y, u.z*v.z);
+}
+
 template<typename T> Vec3<T> operator/(const Vec3<T> &u, const T k) {
    return Vec3<T>(u.x/k, u.y/k, u.z/k);
+}
+
+template<typename T> Vec3<T> operator/(const Vec3<T> &u, const Vec3<T> &v) {
+   return Vec3<T>(u.x/v.x, u.y/v.y, u.z/v.z);
 }
 
 template<typename T> Vec3<T> operator-(const Vec3<T> &u) {
@@ -105,6 +113,6 @@ template<typename T> Vec3<T> refract(const Vec3<T> &u, const Vec3<T> &n, const f
    return c2 < 0 ? Vec3f() : e*u + (e*c1 - sqrt(c2))*n;
 }
 
-template<typename T> void printVec3(const Vec3<T> &u) {
+template<typename T> void print(const Vec3<T> &u) {
    cout << u.x << ' ' << u.y << ' ' << u.z << '\n';
 }

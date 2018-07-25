@@ -6,21 +6,25 @@
 
 #IncludeRegexTransform: 
 
+/Users/mmreed/Documents/CS/Raytrace/kdtree.cpp
+
 /Users/mmreed/Documents/CS/Raytrace/main.cpp
-util_lib.cpp
-/Users/mmreed/Documents/CS/Raytrace/util_lib.cpp
-obj_lib.cpp
-/Users/mmreed/Documents/CS/Raytrace/obj_lib.cpp
+utilities.cpp
+/Users/mmreed/Documents/CS/Raytrace/utilities.cpp
+objects.cpp
+/Users/mmreed/Documents/CS/Raytrace/objects.cpp
 opencv2/opencv.hpp
 -
 boost/algorithm/string/classification.hpp
 -
 boost/algorithm/string/split.hpp
 -
+kdtree.cpp
+/Users/mmreed/Documents/CS/Raytrace/kdtree.cpp
 
-/Users/mmreed/Documents/CS/Raytrace/obj_lib.cpp
+/Users/mmreed/Documents/CS/Raytrace/objects.cpp
 
-/Users/mmreed/Documents/CS/Raytrace/util_lib.cpp
+/Users/mmreed/Documents/CS/Raytrace/utilities.cpp
 stdlib.h
 -
 cfloat
