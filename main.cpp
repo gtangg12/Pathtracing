@@ -7,7 +7,7 @@
 // Scene
 cv::Mat image(400, 400, CV_8UC3, cv::Scalar(210, 160, 30));
 Vec3f background(0.824, 0.627, 0.118);
-vector<PolygonMesh> objects;
+vector<PolygonMesh> obj;
 float zoom = 0.5;
 Vec3f eye(10.5, 4.5, -15.0);
 float sc = 1.0;
@@ -23,7 +23,7 @@ void init(string scene) {
    while(nameReader) {
       string name;
       nameReader >> name;
-      if (name=="")
+      if (name == "")
           break;
       files.push_back(name);
    }
@@ -33,7 +33,7 @@ void init(string scene) {
       string line;
       while(getline(meshReader, line)) {
          if (line == "")
-            continue;
+            break;
          vector<string> tkns;
          boost::split(tkns, line, boost::is_any_of(" "), boost::token_compress_on);
          char type = tkns[0][tkns[0].size()-1];
@@ -61,11 +61,12 @@ void init(string scene) {
                      data.push_back(stoi(spc[k]));
                   num = spc.size();
                }
-               for (int j=0; j<sz; j++) {
-                  Triangle tri(Vec3i(data[(j*num)]-1, data[((j+1)%sz)*num]-1, data[((j+2)%sz)*num]-1),
-                               Vec3i(data[(j*num+1)]-1, data[((j+1)%sz)*num+1]-1, data[((j+2)%sz)*num+1]-1),
-                               Vec3i(data[(j*num+2)]-1, data[((j+1)%sz)*num+2]-1, data[((j+2)%sz)*num+2]-1));
+               for (int j=1; j<sz-1; j++) {
+                  Triangle tri(Vec3i(data[0]-1, data[(j%sz)*num]-1, data[((j+1)%sz)*num]-1),
+                               Vec3i(data[1]-1, data[(j%sz)*num+1]-1, data[((j+1)%sz)*num+1]-1),
+                               Vec3i(data[2]-1, data[(j%sz)*num+2]-1, data[((j+1)%sz)*num+2]-1));
                   mesh.tris.push_back(tri);
+                  mesh.cent.push_back((mesh.vert[tri.vi.x]+mesh.vert[tri.vi.y]+mesh.vert[tri.vi.z])/3.f);
                }
                break;
             }
@@ -74,36 +75,47 @@ void init(string scene) {
             }
          }
       }
-      objects.push_back(mesh);
+      obj.push_back(mesh);
    }
 }
 
-// NAIVE
-bool trace(const Ray &ray, int &mesh, int &tri, float &tmin) {
+bool trace(const Ray &ray, pii &tind, float &tmin) {
    bool hit = false;
-   float t = FLT_MAX;
-   for (int i=0; i<objects.size(); i++)
-      for (int j=0; j<objects[i].tris.size(); j++)
-         if (objects[i].intersect(j, ray.src, ray.dir, t) && t<tmin) {
+   float t;
+   for (int i=0; i<obj.size(); i++)
+      for (int j=0; j<obj[i].tris.size(); j++)
+         if (obj[i].intersect(j, ray, t) && t<tmin) {
             hit = true;
             tmin = t;
-            mesh = i;
-            tri = j;
+            tind = pii(i, j);
          }
    return hit;
 }
 
+void buildTree() {
+   vector<pii> v;
+   for (int i=0; i<obj.size(); i++)
+      for (int j=0; j<obj[i].tris.size(); j++)
+         v.push_back(pii(i, j));
+   tree = new KDNode();
+   tree->box.bnds[0] = Vec3f(-100.0, -100.0, -100.0);
+   tree->box.bnds[1] = Vec3f(100.0, 100.0, 100.0);
+   tree->ind = v;
+   tree->build(0);
+}
+
 // Rendering
 Vec3f castRay(const Ray &ray, const int depth) {
-   int mesh, tri;
+   pii tind;
    float tmin = FLT_MAX;
-   if (!trace(ray, mesh, tri, tmin))
+   if (!tree->search(ray, tind, tmin))
+   //if (!trace(ray, tind, tmin))
       return background;
    Vec3f hit, nrm;
    hit = ray.src+tmin*ray.dir;
-   objects[mesh].surfaceProperties(tri, ray.dir, nrm);
+   obj[tind.first].surfaceProperties(tind.second, ray, nrm);
    float ratio = max(0.f, dot(nrm, ray.dir));
-   return ratio*objects[mesh].albedo;
+   return ratio*obj[tind.first].albedo;
 }
 
 void render() {
@@ -123,6 +135,7 @@ void render() {
 
 int main() {
    init("scene");
+   buildTree();
    render();
    cv::imshow("Scene", image);
    //cv::imwrite("fruit.jpg", image);

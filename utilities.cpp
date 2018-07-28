@@ -42,6 +42,12 @@ template<typename T> struct Vec3 {
    Vec3(): x(0), y(0), z(0) {}
    Vec3(T x): x(x), y(x), z(x) {}
    Vec3(T x, T y, T z): x(x), y(y), z(z) {}
+
+   T& operator[](const int i) {
+      if (i == 0) return x;
+      if (i == 1) return y;
+      return z;
+   }
 };
 
 // Custom Types
@@ -52,6 +58,29 @@ typedef Vec3<long> Vec3l;
 typedef Vec3<ll> Vec3ll;
 typedef Vec3<float> Vec3f;
 typedef Vec3<double> Vec3d;
+
+// Utilities
+template <typename T> bool xcmp(const Vec3<T> &u, const Vec3<T> &v) {
+   return u.x < v.x;
+}
+
+template <typename T> bool ycmp(const Vec3<T> &u, const Vec3<T> &v) {
+   return u.y < v.y;
+}
+
+template <typename T> bool zcmp(const Vec3<T> &u, const Vec3<T> &v) {
+   return u.z < v.z;
+}
+
+bool(*func[3])(const Vec3f &, const Vec3f &) = {xcmp, ycmp, zcmp};
+
+template<typename T> void print(const Vec3<T> &u) {
+   cout << u.x << ' ' << u.y << ' ' << u.z << ' ';
+}
+
+template<typename T> void println(const Vec3<T> &u) {
+   cout << u.x << ' ' << u.y << ' ' << u.z << '\n';
+}
 
 // Algebra
 template<typename T> Vec3<T> operator+(const Vec3<T> &u, const Vec3<T> &v) {
@@ -74,12 +103,16 @@ template<typename T> Vec3<T> operator/(const Vec3<T> &u, const T k) {
    return Vec3<T>(u.x/k, u.y/k, u.z/k);
 }
 
-template<typename T> Vec3<T> operator/(const Vec3<T> &u, const Vec3<T> &v) {
-   return Vec3<T>(u.x/v.x, u.y/v.y, u.z/v.z);
+template<typename T> Vec3<T> operator/(const T k, const Vec3<T> &u) {
+   return Vec3<T>(k/u.x, k/u.y, k/u.z);
 }
 
 template<typename T> Vec3<T> operator-(const Vec3<T> &u) {
    return Vec3<T>(-u.x, -u.y, -u.z);
+}
+
+template<typename T> bool operator==(const Vec3<T> &u, const Vec3<T> &v) {
+   return u.x == v.x && u.y == v.y && u.z == v.z;
 }
 
 template<typename T> float len(const Vec3<T> &u) {
@@ -111,8 +144,4 @@ template<typename T> Vec3<T> refract(const Vec3<T> &u, const Vec3<T> &n, const f
    if (c1<0) c1 = -c1; else e = -r;
    float c2 = 1.0 - e*e*(1.0 - c1*c1);
    return c2 < 0 ? Vec3f() : e*u + (e*c1 - sqrt(c2))*n;
-}
-
-template<typename T> void print(const Vec3<T> &u) {
-   cout << u.x << ' ' << u.y << ' ' << u.z << '\n';
 }
