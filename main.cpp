@@ -5,12 +5,12 @@
 #include <boost/algorithm/string/split.hpp>
 
 // Scene
-cv::Mat image(400, 400, CV_8UC3, cv::Scalar(210, 160, 30));
-Vec3f background(0.824, 0.627, 0.118);
+cv::Mat image(500, 500, CV_8UC3, cv::Scalar(210, 160, 30));
+Vec3d background(0.824, 0.627, 0.118);
 vector<PolygonMesh> obj;
-float zoom = 0.5;
-Vec3f eye(10.5, 4.5, -15.0);
-float sc = 1.0;
+float zoom = -1.0;
+Vec3d eye(-0.025, 0.125, 0.25);
+double sc = 1.0;
 
 // KDTree
 #include "kdtree.cpp"
@@ -28,8 +28,8 @@ void init(string scene) {
       files.push_back(name);
    }
    for (int i=1; i<files.size(); i++) {
-      ifstream meshReader(files[0]+"/"+files[i]);
-      PolygonMesh mesh(Vec3f(1.0));
+      ifstream meshReader("OBJ/"+files[0]+"/"+files[i]);
+      PolygonMesh mesh(Vec3d(1.0));
       string line;
       while(getline(meshReader, line)) {
          if (line == "")
@@ -39,11 +39,11 @@ void init(string scene) {
          char type = tkns[0][tkns[0].size()-1];
          switch(type) {
             case 'v': {
-               mesh.vert.push_back(Vec3f(stof(tkns[1]), stof(tkns[2]), stof(tkns[3])));
+               mesh.vert.push_back(Vec3d(stof(tkns[1]), stof(tkns[2]), stof(tkns[3])));
                break;
             }
             case 'n': {
-               mesh.norm.push_back(unit(Vec3f(stof(tkns[1]), stof(tkns[2]), stof(tkns[3]))));
+               mesh.norm.push_back(unit(Vec3d(stof(tkns[1]), stof(tkns[2]), stof(tkns[3]))));
                break;
             }
             case 't': {
@@ -62,11 +62,13 @@ void init(string scene) {
                   num = spc.size();
                }
                for (int j=1; j<sz-1; j++) {
-                  Triangle tri(Vec3i(data[0]-1, data[(j%sz)*num]-1, data[((j+1)%sz)*num]-1),
-                               Vec3i(data[1]-1, data[(j%sz)*num+1]-1, data[((j+1)%sz)*num+1]-1),
-                               Vec3i(data[2]-1, data[(j%sz)*num+2]-1, data[((j+1)%sz)*num+2]-1));
+                  Triangle tri(Vec3i(data[0]-1, data[(j%sz)*num]-1, data[((j+1)%sz)*num]-1), Vec3i(-1), Vec3i(-1));
+                  if (data.size()>1)
+                     tri.ni = Vec3i(data[1]-1, data[(j%sz)*num+1]-1, data[((j+1)%sz)*num+1]-1);
+                  if (data.size()>2)
+                     tri.ti = Vec3i(data[2]-1, data[(j%sz)*num+2]-1, data[((j+1)%sz)*num+2]-1);
                   mesh.tris.push_back(tri);
-                  mesh.cent.push_back((mesh.vert[tri.vi.x]+mesh.vert[tri.vi.y]+mesh.vert[tri.vi.z])/3.f);
+                  mesh.cent.push_back((mesh.vert[tri.vi.x]+mesh.vert[tri.vi.y]+mesh.vert[tri.vi.z])/3.0);
                }
                break;
             }
@@ -79,9 +81,9 @@ void init(string scene) {
    }
 }
 
-bool trace(const Ray &ray, pii &tind, float &tmin) {
+bool trace(const Ray &ray, pii &tind, double &tmin) {
    bool hit = false;
-   float t;
+   double t;
    for (int i=0; i<obj.size(); i++)
       for (int j=0; j<obj[i].tris.size(); j++)
          if (obj[i].intersect(j, ray, t) && t<tmin) {
@@ -98,23 +100,23 @@ void buildTree() {
       for (int j=0; j<obj[i].tris.size(); j++)
          v.push_back(pii(i, j));
    tree = new KDNode();
-   tree->box.bnds[0] = Vec3f(-100.0, -100.0, -100.0);
-   tree->box.bnds[1] = Vec3f(100.0, 100.0, 100.0);
+   tree->box.bnds[0] = Vec3d(-100.0, -100.0, -100.0);
+   tree->box.bnds[1] = Vec3d(100.0, 100.0, 100.0);
    tree->ind = v;
    tree->build(0);
 }
 
 // Rendering
-Vec3f castRay(const Ray &ray, const int depth) {
+Vec3d castRay(const Ray &ray, const int depth) {
    pii tind;
-   float tmin = FLT_MAX;
+   double tmin = FLT_MAX;
    if (!tree->search(ray, tind, tmin))
    //if (!trace(ray, tind, tmin))
       return background;
-   Vec3f hit, nrm;
+   Vec3d hit, nrm;
    hit = ray.src+tmin*ray.dir;
    obj[tind.first].surfaceProperties(tind.second, ray, nrm);
-   float ratio = max(0.f, dot(nrm, ray.dir));
+   double ratio = max(0.0, dot(nrm, ray.dir));
    return ratio*obj[tind.first].albedo;
 }
 
@@ -123,9 +125,9 @@ void render() {
       for (int j=0; j<image.cols; j++) {
          // camera rays
          cout << i <<  ' ' << j << endl;
-         Vec3f pxl(eye.x+0.5-(float)j/image.rows, eye.y+0.5-(float)i/image.rows, eye.z+zoom);
+         Vec3d pxl(eye.x+0.5-(double)j/image.rows, eye.y+0.5-(double)i/image.rows, eye.z+zoom);
          Ray ray(eye, unit(pxl - eye));
-         Vec3f paint = castRay(ray, 1);
+         Vec3d paint = castRay(ray, 1);
          cv::Vec3b& color = image.at<cv::Vec3b>(i, j);
          color[0] = min(255, (int)(255.0*paint.x));
          color[1] = min(255, (int)(255.0*paint.y));
@@ -134,10 +136,11 @@ void render() {
 }
 
 int main() {
-   init("scene");
+   string name = "bunny";
+   init(name);
    buildTree();
    render();
    cv::imshow("Scene", image);
-   //cv::imwrite("fruit.jpg", image);
+   cv::imwrite(name+".jpg", image);
    cv::waitKey(0);
 }

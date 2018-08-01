@@ -6,10 +6,10 @@
 // Bounding Box
 class Box {
 public:
-   Vec3f bnds[2];
+   Vec3d bnds[2];
 
    bool intersect(const Ray &ray) {
-      float tmin, tmax, ymin, ymax, zmin, zmax;
+      double tmin, tmax, ymin, ymax, zmin, zmax;
       tmin = (bnds[ray.sign[0]].x - ray.src.x)*ray.inv.x;
       tmax = (bnds[1-ray.sign[0]].x - ray.src.x)*ray.inv.x;
       ymin = (bnds[ray.sign[1]].y - ray.src.y)*ray.inv.y;
@@ -33,7 +33,7 @@ class KDNode {
 public:
    Box box;
    int axis;
-   float splt;
+   double splt;
    KDNode *left, *right;
    vector<pii> ind; // Mesh, Triangle
 
@@ -46,7 +46,7 @@ public:
       right = new KDNode();
       axis = depth%3;
       // Find median NlogN
-      vector<Vec3f> pnts;
+      vector<Vec3d> pnts;
       for (int i=0; i<ind.size(); i++)
          pnts.push_back(obj[pms].cent[trg]);
       sort(pnts.begin(), pnts.end(), func[axis]);
@@ -79,12 +79,12 @@ public:
       right->build(depth+1);
    }
 
-   bool search(const Ray &ray, pii &tind, float &tmin) {
+   bool search(const Ray &ray, pii &tind, double &tmin) {
       if (!box.intersect(ray))
          return false;
       if (ind.size()<LEAF) {
          // Check all triangles in leaf node
-         float t = FLT_MAX;
+         double t = FLT_MAX;
          for (int i=0; i<ind.size(); i++)
             if (obj[pms].intersect(trg, ray, t) && t<tmin) {
                tmin = t;
@@ -92,7 +92,7 @@ public:
             }
          return t != FLT_MAX;
       }
-      Vec3f temp = ray.src;
+      Vec3d temp = ray.src;
       if (temp[axis] <= splt)
          return left->search(ray, tind, tmin) || right->search(ray, tind, tmin);
       return right->search(ray, tind, tmin) || left->search(ray, tind, tmin);

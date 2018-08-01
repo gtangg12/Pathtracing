@@ -4,11 +4,11 @@
 // Objects
 class Ray {
 public:
-   Vec3f src, dir, inv;
+   Vec3d src, dir, inv;
    bool sign[3]; // (+) if < 0 else (-)
 
-   Ray(const Vec3f &src, const Vec3f &dir): src(src), dir(dir) {
-      inv = 1.f/dir;
+   Ray(const Vec3d &src, const Vec3d &dir): src(src), dir(dir) {
+      inv = 1.0/dir;
       sign[0] = signbit(dir.x);
       sign[1] = signbit(dir.y);
       sign[2] = signbit(dir.z);
@@ -24,40 +24,40 @@ public:
 
 class PolygonMesh {
 public:
-   Vec3f albedo;
-   vector<Vec3f> vert;
-   vector<Vec3f> norm;
+   Vec3d albedo;
+   vector<Vec3d> vert;
+   vector<Vec3d> norm;
    vector<pff> text;
-   vector<Vec3f> cent;
+   vector<Vec3d> cent;
    vector<Triangle> tris;
 
-   PolygonMesh(const Vec3f &albedo): albedo(albedo) {}
+   PolygonMesh(const Vec3d &albedo): albedo(albedo) {}
 
-   bool intersect(const int ind, const Ray &ray, float &t) {
+   bool intersect(const int ind, const Ray &ray, double &t) {
       Vec3i V = tris[ind].vi;
-      Vec3f ba = vert[V.y] - vert[V.x];
-      Vec3f ca = vert[V.z] - vert[V.x];
-      Vec3f P = cross(ray.dir, ca);
-      float det = dot(P, ba);
+      Vec3d ba = vert[V.y] - vert[V.x];
+      Vec3d ca = vert[V.z] - vert[V.x];
+      Vec3d P = cross(ray.dir, ca);
+      double det = dot(P, ba);
       // Backface culling
       if (det<MINB)
          return false;
-      Vec3f T = ray.src - vert[V.x];
-      float u = dot(P, T)/det;
+      Vec3d T = ray.src - vert[V.x];
+      double u = dot(P, T)/det;
       if (u < 0.0 || u > 1.0)
          return false;
-      Vec3f Q = cross(T, ba);
-      float v = dot(Q, ray.dir)/det;
+      Vec3d Q = cross(T, ba);
+      double v = dot(Q, ray.dir)/det;
       if (v < 0.0 || u+v > 1.0)
          return false;
       t = dot(Q, ca)/det;
       return true;
    }
 
-   void surfaceProperties(const int ind, const Ray &ray, Vec3f &nrm) {
+   void surfaceProperties(const int ind, const Ray &ray, Vec3d &nrm) {
       Vec3i V = tris[ind].vi;
-      Vec3f ba = vert[V.y] - vert[V.x];
-      Vec3f ca = vert[V.z] - vert[V.x];
+      Vec3d ba = vert[V.y] - vert[V.x];
+      Vec3d ca = vert[V.z] - vert[V.x];
       nrm = unit(cross(ca, ba));
    }
 };
