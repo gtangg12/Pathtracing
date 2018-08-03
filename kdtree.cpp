@@ -1,5 +1,5 @@
 // Constants
-#define LEAF 2
+#define LEAF 1
 #define pms ind[i].first
 #define trg ind[i].second
 
@@ -28,6 +28,7 @@ public:
    }
 };
 
+int sum = 0;
 // Acceleration Structure
 class KDNode {
 public:
@@ -41,7 +42,7 @@ public:
    KDNode() {}
 
    void build(const int depth) {
-      if (ind.size()<LEAF) {
+      if (ind.size()<=LEAF) {
          leaf = true;
          return;
       }

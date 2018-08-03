@@ -5,7 +5,7 @@
 #include <boost/algorithm/string/split.hpp>
 
 // Scene
-cv::Mat image(500, 500, CV_8UC3, cv::Scalar(210, 160, 30));
+cv::Mat image(300, 300, CV_8UC3, cv::Scalar(210, 160, 30));
 Vec3d background(0.824, 0.627, 0.118);
 vector<PolygonMesh> obj;
 float zoom = -1.0;
@@ -18,7 +18,7 @@ Vec3d vmin(0), vmax(0);
 
 // Initialization
 void init(string scene) {
-   ifstream nameReader(scene+".txt");
+   ifstream nameReader("Scenes/"+scene+".txt");
    vector<string> files;
    while(nameReader) {
       string name;
@@ -87,7 +87,7 @@ bool trace(const Ray &ray, pii &tind, double &tmin, pdd &uv) {
    pdd bay;
    for (int i=0; i<obj.size(); i++)
       for (int j=0; j<obj[i].tris.size(); j++)
-         if (obj[i].intersect(j, ray, t,bay) && t<tmin) {
+         if (obj[i].intersect(j, ray, t, bay) && t<tmin) {
             tmin = t;
             uv = bay;
             tind = pii(i, j);
@@ -101,7 +101,7 @@ void buildTree() {
       for (int j=0; j<obj[i].tris.size(); j++)
          v.push_back(pii(i, j));
    for (int i=0; i<obj.size(); i++)
-      for (int j=0; j<obj[i].vert.size(); j++) 
+      for (int j=0; j<obj[i].vert.size(); j++)
          for (int k=0; k<3; k++) {
             vmin[k] = min(vmin[k], obj[i].vert[j][k]);
             vmax[k] = max(vmax[k], obj[i].vert[j][k]);
@@ -117,7 +117,7 @@ Vec3d castRay(const Ray &ray, const int depth) {
    pii tind; pdd uv;
    double tmin = FLT_MAX;
    if (!tree->search(ray, tind, tmin, uv))
-   //if (!trace(ray, tind, tmin, uv))
+   // if (!trace(ray, tind, tmin, uv))
       return background;
    Vec3d hit, nrm;
    hit = ray.src + tmin*ray.dir;
@@ -129,7 +129,6 @@ Vec3d castRay(const Ray &ray, const int depth) {
 void render() {
    for (int i=0; i<image.rows; i++)
       for (int j=0; j<image.cols; j++) {
-         // camera rays
          cout << i <<  ' ' << j << endl;
          Vec3d pxl(eye.x+0.5-(double)j/image.rows, eye.y+0.5-(double)i/image.rows, eye.z+zoom);
          Ray ray(eye, unit(pxl - eye));
@@ -147,6 +146,6 @@ int main() {
    buildTree();
    render();
    cv::imshow("Scene", image);
-   //cv::imwrite(name+".jpg", image);
+   //cv::imwrite("Images/"+name+".jpg", image);
    cv::waitKey(0);
 }
