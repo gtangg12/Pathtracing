@@ -116,7 +116,7 @@ void buildTree() {
 Vec3d castRay(const Ray &ray, const int depth) {
    pii tind; pdd uv;
    double tmin = FLT_MAX;
-   if (!tree->search(ray, tind, tmin, uv))
+   if (!tree->search(ray, tind, tmin, uv, 0))
    // if (!trace(ray, tind, tmin, uv))
       return background;
    Vec3d hit, nrm;

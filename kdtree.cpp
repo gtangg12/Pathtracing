@@ -1,5 +1,5 @@
 // Constants
-#define LEAF 1
+#define LEAF 3
 #define pms ind[i].first
 #define trg ind[i].second
 
@@ -42,6 +42,7 @@ public:
    KDNode() {}
 
    void build(const int depth) {
+      leaf = false;
       if (ind.size()<=LEAF) {
          leaf = true;
          return;
@@ -88,7 +89,7 @@ public:
       right->build(depth+1);
    }
 
-   bool search(const Ray &ray, pii &tind, double &tmin, pdd &uv) {
+   bool search(const Ray &ray, pii &tind, double &tmin, pdd &uv, int depth) {
       if (!box.intersect(ray))
          return false;
       if (leaf) {
@@ -105,7 +106,7 @@ public:
       }
       Vec3d temp = ray.src;
       if (temp[axis] <= splt)
-         return left->search(ray, tind, tmin, uv) || right->search(ray, tind, tmin, uv);
-      return right->search(ray, tind, tmin, uv) || left->search(ray, tind, tmin, uv);
+         return left->search(ray, tind, tmin, uv, depth+1) || right->search(ray, tind, tmin, uv, depth+1);
+      return right->search(ray, tind, tmin, uv, depth+1) || left->search(ray, tind, tmin, uv, depth+1);
    }
 };
