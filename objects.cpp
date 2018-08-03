@@ -33,7 +33,7 @@ public:
 
    PolygonMesh(const Vec3d &albedo): albedo(albedo) {}
 
-   bool intersect(const int ind, const Ray &ray, double &t) {
+   bool intersect(const int ind, const Ray &ray, double &t, pdd &uv) {
       Vec3i V = tris[ind].vi;
       Vec3d ba = vert[V.y] - vert[V.x];
       Vec3d ca = vert[V.z] - vert[V.x];
@@ -48,16 +48,15 @@ public:
          return false;
       Vec3d Q = cross(T, ba);
       double v = dot(Q, ray.dir)/det;
-      if (v < 0.0 || u+v > 1.0)
+      if (v < 0.0 || u + v > 1.0)
          return false;
       t = dot(Q, ca)/det;
+      uv = pdd(u, v);
       return true;
    }
 
-   void surfaceProperties(const int ind, const Ray &ray, Vec3d &nrm) {
-      Vec3i V = tris[ind].vi;
-      Vec3d ba = vert[V.y] - vert[V.x];
-      Vec3d ca = vert[V.z] - vert[V.x];
-      nrm = unit(cross(ca, ba));
+   void surfaceProperties(const int ind, const Ray &ray, const pdd &uv, Vec3d &nrm) {
+      Vec3i N = tris[ind].ni;
+      nrm = (1.0-uv.first-uv.second)*norm[N.x] + uv.first*norm[N.y] + uv.second*norm[N.z];
    }
 };

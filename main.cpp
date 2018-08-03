@@ -10,11 +10,11 @@ Vec3d background(0.824, 0.627, 0.118);
 vector<PolygonMesh> obj;
 float zoom = -1.0;
 Vec3d eye(-0.025, 0.125, 0.25);
-double sc = 1.0;
 
 // KDTree
 #include "kdtree.cpp"
 KDNode* tree;
+Vec3d vmin(0), vmax(0);
 
 // Initialization
 void init(string scene) {
@@ -29,7 +29,7 @@ void init(string scene) {
    }
    for (int i=1; i<files.size(); i++) {
       ifstream meshReader("OBJ/"+files[0]+"/"+files[i]);
-      PolygonMesh mesh(Vec3d(1.0));
+      PolygonMesh mesh(Vec3d(0.1, 0.6, 0.9));
       string line;
       while(getline(meshReader, line)) {
          if (line == "")
@@ -81,17 +81,18 @@ void init(string scene) {
    }
 }
 
-bool trace(const Ray &ray, pii &tind, double &tmin) {
-   bool hit = false;
-   double t;
+// Naive
+bool trace(const Ray &ray, pii &tind, double &tmin, pdd &uv) {
+   double t = FLT_MAX;
+   pdd bay;
    for (int i=0; i<obj.size(); i++)
       for (int j=0; j<obj[i].tris.size(); j++)
-         if (obj[i].intersect(j, ray, t) && t<tmin) {
-            hit = true;
+         if (obj[i].intersect(j, ray, t,bay) && t<tmin) {
             tmin = t;
+            uv = bay;
             tind = pii(i, j);
          }
-   return hit;
+   return t != FLT_MAX;
 }
 
 void buildTree() {
@@ -99,24 +100,32 @@ void buildTree() {
    for (int i=0; i<obj.size(); i++)
       for (int j=0; j<obj[i].tris.size(); j++)
          v.push_back(pii(i, j));
+   for (int i=0; i<obj.size(); i++)
+      for (int j=0; j<obj[i].vert.size(); j++) {
+         vmin.x = min(vmin.x, obj[i].vert[j].x);
+         vmin.y = min(vmin.y, obj[i].vert[j].y);
+         vmin.z = min(vmin.z, obj[i].vert[j].z);
+         vmax.x = max(vmax.x, obj[i].vert[j].x);
+         vmax.y = max(vmax.y, obj[i].vert[j].y);
+         vmax.z = max(vmax.z, obj[i].vert[j].z);
+      }
    tree = new KDNode();
-   tree->box.bnds[0] = Vec3d(-100.0, -100.0, -100.0);
-   tree->box.bnds[1] = Vec3d(100.0, 100.0, 100.0);
+   tree->box.bnds[0] = vmin-Vec3d(0.01);
+   tree->box.bnds[1] = vmax+Vec3d(0.01);
    tree->ind = v;
    tree->build(0);
 }
 
-// Rendering
 Vec3d castRay(const Ray &ray, const int depth) {
-   pii tind;
+   pii tind; pdd uv;
    double tmin = FLT_MAX;
-   if (!tree->search(ray, tind, tmin))
-   //if (!trace(ray, tind, tmin))
+   if (!tree->search(ray, tind, tmin, uv))
+   //if (!trace(ray, tind, tmin, uv))
       return background;
    Vec3d hit, nrm;
-   hit = ray.src+tmin*ray.dir;
-   obj[tind.first].surfaceProperties(tind.second, ray, nrm);
-   double ratio = max(0.0, dot(nrm, ray.dir));
+   hit = ray.src + tmin*ray.dir;
+   obj[tind.first].surfaceProperties(tind.second, ray, uv, nrm);
+   double ratio = max(0.0, dot(nrm, -ray.dir));
    return ratio*obj[tind.first].albedo;
 }
 
@@ -141,6 +150,6 @@ int main() {
    buildTree();
    render();
    cv::imshow("Scene", image);
-   cv::imwrite(name+".jpg", image);
+   //cv::imwrite(name+".jpg", image);
    cv::waitKey(0);
 }

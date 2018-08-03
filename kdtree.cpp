@@ -1,5 +1,5 @@
 // Constants
-#define LEAF 3
+#define LEAF 2
 #define pms ind[i].first
 #define trg ind[i].second
 
@@ -34,14 +34,17 @@ public:
    Box box;
    int axis;
    double splt;
+   bool leaf;
    KDNode *left, *right;
    vector<pii> ind; // Mesh, Triangle
 
    KDNode() {}
 
    void build(const int depth) {
-      if (ind.size()<LEAF)
+      if (ind.size()<LEAF) {
+         leaf = true;
          return;
+      }
       left = new KDNode();
       right = new KDNode();
       axis = depth%3;
@@ -57,6 +60,11 @@ public:
             left->ind.push_back(ind[i]);
          else
             right->ind.push_back(ind[i]);
+      }
+      // Centers are the same
+      if (max(left->ind.size(), right->ind.size()) == ind.size()) {
+         leaf = true;
+         return;
       }
       // Update bounding box
       copy(begin(box.bnds), end(box.bnds), begin(left->box.bnds));
@@ -79,22 +87,24 @@ public:
       right->build(depth+1);
    }
 
-   bool search(const Ray &ray, pii &tind, double &tmin) {
+   bool search(const Ray &ray, pii &tind, double &tmin, pdd &uv) {
       if (!box.intersect(ray))
          return false;
-      if (ind.size()<LEAF) {
+      if (leaf) {
          // Check all triangles in leaf node
          double t = FLT_MAX;
+         pdd bay;
          for (int i=0; i<ind.size(); i++)
-            if (obj[pms].intersect(trg, ray, t) && t<tmin) {
+            if (obj[pms].intersect(trg, ray, t, bay) && t<tmin) {
                tmin = t;
+               uv = bay;
                tind = pii(pms, trg);
             }
          return t != FLT_MAX;
       }
       Vec3d temp = ray.src;
       if (temp[axis] <= splt)
-         return left->search(ray, tind, tmin) || right->search(ray, tind, tmin);
-      return right->search(ray, tind, tmin) || left->search(ray, tind, tmin);
+         return left->search(ray, tind, tmin, uv) || right->search(ray, tind, tmin, uv);
+      return right->search(ray, tind, tmin, uv) || left->search(ray, tind, tmin, uv);
    }
 };
