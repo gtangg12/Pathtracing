@@ -101,14 +101,11 @@ void buildTree() {
       for (int j=0; j<obj[i].tris.size(); j++)
          v.push_back(pii(i, j));
    for (int i=0; i<obj.size(); i++)
-      for (int j=0; j<obj[i].vert.size(); j++) {
-         vmin.x = min(vmin.x, obj[i].vert[j].x);
-         vmin.y = min(vmin.y, obj[i].vert[j].y);
-         vmin.z = min(vmin.z, obj[i].vert[j].z);
-         vmax.x = max(vmax.x, obj[i].vert[j].x);
-         vmax.y = max(vmax.y, obj[i].vert[j].y);
-         vmax.z = max(vmax.z, obj[i].vert[j].z);
-      }
+      for (int j=0; j<obj[i].vert.size(); j++) 
+         for (int k=0; k<3; k++) {
+            vmin[k] = min(vmin[k], obj[i].vert[j][k]);
+            vmax[k] = max(vmax[k], obj[i].vert[j][k]);
+         }
    tree = new KDNode();
    tree->box.bnds[0] = vmin-Vec3d(0.01);
    tree->box.bnds[1] = vmax+Vec3d(0.01);
