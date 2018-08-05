@@ -1,3 +1,2 @@
-Reference
-bunny2.txt
-floor.txt
+O bunny.txt
+O floor.txt

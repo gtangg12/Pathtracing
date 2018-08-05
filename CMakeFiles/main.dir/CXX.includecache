@@ -6,23 +6,27 @@
 
 #IncludeRegexTransform: 
 
-/Users/mmreed/Documents/CS/Raytrace/kdtree.cpp
+/Users/mmreed/Documents/CS/Raytrace/KDTree.cpp
+
+/Users/mmreed/Documents/CS/Raytrace/lights.cpp
 
 /Users/mmreed/Documents/CS/Raytrace/main.cpp
 utilities.cpp
 /Users/mmreed/Documents/CS/Raytrace/utilities.cpp
-objects.cpp
-/Users/mmreed/Documents/CS/Raytrace/objects.cpp
+polygonMesh.cpp
+/Users/mmreed/Documents/CS/Raytrace/polygonMesh.cpp
+lights.cpp
+/Users/mmreed/Documents/CS/Raytrace/lights.cpp
 opencv2/opencv.hpp
 -
 boost/algorithm/string/classification.hpp
 -
 boost/algorithm/string/split.hpp
 -
-kdtree.cpp
-/Users/mmreed/Documents/CS/Raytrace/kdtree.cpp
+KDTree.cpp
+/Users/mmreed/Documents/CS/Raytrace/KDTree.cpp
 
-/Users/mmreed/Documents/CS/Raytrace/objects.cpp
+/Users/mmreed/Documents/CS/Raytrace/polygonMesh.cpp
 
 /Users/mmreed/Documents/CS/Raytrace/utilities.cpp
 stdlib.h

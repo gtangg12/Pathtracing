@@ -42,12 +42,7 @@ template<typename T> struct Vec3 {
    Vec3(): x(0), y(0), z(0) {}
    Vec3(T x): x(x), y(x), z(x) {}
    Vec3(T x, T y, T z): x(x), y(y), z(z) {}
-
-   T& operator[](const int i) {
-      if (i == 0) return x;
-      if (i == 1) return y;
-      return z;
-   }
+   T& operator[](const int i) { return i == 0 ? x : i ==1 ? y : z; }
 };
 
 // Custom Types
@@ -113,6 +108,22 @@ template<typename T> Vec3<T> operator-(const Vec3<T> &u) {
 
 template<typename T> bool operator==(const Vec3<T> &u, const Vec3<T> &v) {
    return u.x == v.x && u.y == v.y && u.z == v.z;
+}
+
+template<typename T> bool operator<(const Vec3<T> &u, const Vec3<T> &v) {
+   return u.x < v.x && u.y < v.y && u.z < v.z;
+}
+
+template<typename T> bool operator>(const Vec3<T> &u, const Vec3<T> &v) {
+   return u.x > v.x && u.y > v.y && u.z > v.z;
+}
+
+template<typename T> bool operator<=(const Vec3<T> &u, const Vec3<T> &v) {
+   return u.x <= v.x && u.y <= v.y && u.z <= v.z;
+}
+
+template<typename T> bool operator>=(const Vec3<T> &u, const Vec3<T> &v) {
+   return u.x >= v.x && u.y >= v.y && u.z >= v.z;
 }
 
 template<typename T> double len(const Vec3<T> &u) {

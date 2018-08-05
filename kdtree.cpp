@@ -1,5 +1,5 @@
 // Constants
-#define LEAF 3
+#define LEAF 2
 #define pms ind[i].first
 #define trg ind[i].second
 
@@ -26,9 +26,12 @@ public:
          return false;
       return true;
    }
+
+   bool contains(const Vec3d &pnt) {
+      return pnt>=bnds[0] && pnt<=bnds[1];
+   }
 };
 
-int sum = 0;
 // Acceleration Structure
 class KDNode {
 public:
@@ -39,10 +42,9 @@ public:
    KDNode *left, *right;
    vector<pii> ind; // Mesh, Triangle
 
-   KDNode() {}
+   KDNode(): leaf(false) {}
 
    void build(const int depth) {
-      leaf = false;
       if (ind.size()<=LEAF) {
          leaf = true;
          return;
@@ -56,6 +58,11 @@ public:
          pnts.push_back(obj[pms].cent[trg]);
       sort(pnts.begin(), pnts.end(), func[axis]);
       splt = pnts[pnts.size()/2][axis];
+      // Update bounding box
+      copy(begin(box.bnds), end(box.bnds), begin(left->box.bnds));
+      copy(begin(box.bnds), end(box.bnds), begin(right->box.bnds));
+      left->box.bnds[1][axis] = splt;
+      right->box.bnds[0][axis] = splt;
       // Assign triangles
       for (int i=0; i<ind.size(); i++) {
          if (obj[pms].cent[trg][axis] <= splt)
@@ -68,11 +75,6 @@ public:
          leaf = true;
          return;
       }
-      // Update bounding box
-      copy(begin(box.bnds), end(box.bnds), begin(left->box.bnds));
-      copy(begin(box.bnds), end(box.bnds), begin(right->box.bnds));
-      left->box.bnds[1][axis] = splt;
-      right->box.bnds[0][axis] = splt;
       // Expand boxes
       Triangle* temp;
       for (int i=0; i<left->ind.size(); i++) {
@@ -89,24 +91,28 @@ public:
       right->build(depth+1);
    }
 
-   bool search(const Ray &ray, pii &tind, double &tmin, pdd &uv, int depth) {
+   bool search(const Ray &ray, pii &tind, double &tmin, pdd &uv) {
       if (!box.intersect(ray))
          return false;
       if (leaf) {
          // Check all triangles in leaf node
-         double t = FLT_MAX;
+         double t;
+         bool found = false;
          pdd bay;
          for (int i=0; i<ind.size(); i++)
-            if (obj[pms].intersect(trg, ray, t, bay) && t<tmin) {
+            if (obj[pms].intersect(trg, ray, t, bay) && t>0 && t<tmin) {
+               found = true;
                tmin = t;
                uv = bay;
                tind = pii(pms, trg);
             }
-         return t != FLT_MAX;
+         return found;
       }
+      /* FIX FOR CASEWORK
       Vec3d temp = ray.src;
       if (temp[axis] <= splt)
          return left->search(ray, tind, tmin, uv, depth+1) || right->search(ray, tind, tmin, uv, depth+1);
-      return right->search(ray, tind, tmin, uv, depth+1) || left->search(ray, tind, tmin, uv, depth+1);
+      */
+      return right->search(ray, tind, tmin, uv) | left->search(ray, tind, tmin, uv);
    }
 };

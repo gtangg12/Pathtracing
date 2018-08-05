@@ -1,3 +1,2 @@
-Shapes
-cube3.txt
-floor.txt
+O cube3.txt
+O floor.txt
