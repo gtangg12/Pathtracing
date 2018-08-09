@@ -1,7 +1,5 @@
-// Constants
 #define MINB 1e-8
 
-// Structs
 class Ray {
 public:
    Vec3d src, dir, inv;
@@ -37,8 +35,8 @@ public:
       Vec3d P = cross(ray.dir, ca);
       double det = dot(P, ba);
       // Backface culling
-      //if (det<MINB)
-         //return false;
+      // if (det<MINB)
+         // return false;
       Vec3d T = ray.src - vert[V.x];
       double u = dot(P, T)/det;
       if (u < 0.0 || u > 1.0)
@@ -54,10 +52,11 @@ public:
 
    void surfaceProperties(const int ind, const Ray &ray, const pdd &uv, Vec3d &nrm) {
       /*Vec3i N = tris[ind].ni;
-      nrm = (1.0-uv.first-uv.second)*norm[N.x] + uv.first*norm[N.y] + uv.second*norm[N.z];*/
+      nrm = unit((1.0-uv.first-uv.second)*norm[N.x] + uv.first*norm[N.y] + uv.second*norm[N.z]);
+      */
       Vec3i V = tris[ind].vi;
       Vec3d ba = vert[V.y] - vert[V.x];
       Vec3d ca = vert[V.z] - vert[V.x];
-      nrm = unit(cross(ba, ca));
+      nrm = unit(cross(ca, ba));
    }
 };

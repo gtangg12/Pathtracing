@@ -12,4 +12,4 @@ O pear.txt 0.765 0.851 0.220
 O plate.txt 1 1 1
 O sheet.txt 0.76 0.855 0.725
 # type, light, pos, RGB values
-L d 0 1 0 1 1 1 1 20.5
+L d 0 1 0 1 1 1 3

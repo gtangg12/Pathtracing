@@ -1,9 +1,7 @@
-// Constants
-#define LEAF 2
+#define LEAF 5
 #define pms ind[i].first
 #define trg ind[i].second
 
-// Bounding Box
 class Box {
 public:
    Vec3d bnds[2];
@@ -26,13 +24,12 @@ public:
          return false;
       return true;
    }
-
-   bool contains(const Vec3d &pnt) {
-      return pnt>=bnds[0] && pnt<=bnds[1];
-   }
 };
 
-// Acceleration Structure
+// Stats
+int tris = 0;
+int sum = 0;
+
 class KDNode {
 public:
    Box box;
@@ -46,6 +43,7 @@ public:
 
    void build(const int depth) {
       if (ind.size()<=LEAF) {
+         sum+=ind.size();
          leaf = true;
          return;
       }
@@ -63,44 +61,42 @@ public:
       copy(begin(box.bnds), end(box.bnds), begin(right->box.bnds));
       left->box.bnds[1][axis] = splt;
       right->box.bnds[0][axis] = splt;
-      // Assign triangles
+      // Assign triangles based on locations of vert relative to splt
       for (int i=0; i<ind.size(); i++) {
-         if (obj[pms].cent[trg][axis] <= splt)
-            left->ind.push_back(ind[i]);
-         else
-            right->ind.push_back(ind[i]);
+         Vec3i V = obj[pms].tris[trg].vi;
+         bool l = false, r = false;
+         for (int j=0; j<3; j++) {
+            Vec3d pnt = obj[pms].vert[V[j]];
+            l = pnt[axis]<=splt ? true : l;
+            r = pnt[axis]>splt ? true : r;
+         }
+         if (l) left->ind.push_back(ind[i]);
+         if (r) right->ind.push_back(ind[i]);
       }
-      // Centers are the same
+      // if centers are the same
       if (max(left->ind.size(), right->ind.size()) == ind.size()) {
+         sum += ind.size();
          leaf = true;
+         free(left);
+         free(right);
          return;
-      }
-      // Expand boxes
-      Triangle* temp;
-      for (int i=0; i<left->ind.size(); i++) {
-         temp = &obj[left->pms].tris[left->trg];
-         for (int j=0; j<3; j++)
-            left->box.bnds[1][axis] = max(left->box.bnds[1][axis], obj[left->pms].vert[temp->vi[j]][axis]);
-      }
-      for (int i=0; i<right->ind.size(); i++) {
-         temp = &obj[right->pms].tris[right->trg];
-         for (int j=0; j<3; j++)
-            right->box.bnds[0][axis] = min(right->box.bnds[0][axis], obj[right->pms].vert[temp->vi[j]][axis]);
       }
       left->build(depth+1);
       right->build(depth+1);
    }
-
+   
    bool search(const Ray &ray, pii &tind, double &tmin, pdd &uv) {
       if (!box.intersect(ray))
          return false;
       if (leaf) {
-         // Check all triangles in leaf node
          double t;
          bool found = false;
          pdd bay;
          for (int i=0; i<ind.size(); i++)
             if (obj[pms].intersect(trg, ray, t, bay) && t>0 && t<tmin) {
+               Vec3d hit = ray.src+t*ray.dir;
+               if (!(hit>=box.bnds[0] && hit<=box.bnds[1]))
+                  continue;
                found = true;
                tmin = t;
                uv = bay;
@@ -108,11 +104,30 @@ public:
             }
          return found;
       }
-      /* FIX FOR CASEWORK
       Vec3d temp = ray.src;
       if (temp[axis] <= splt)
-         return left->search(ray, tind, tmin, uv, depth+1) || right->search(ray, tind, tmin, uv, depth+1);
-      */
-      return right->search(ray, tind, tmin, uv) | left->search(ray, tind, tmin, uv);
+         return left->search(ray, tind, tmin, uv) || right->search(ray, tind, tmin, uv);
+      return right->search(ray, tind, tmin, uv) || left->search(ray, tind, tmin, uv);
    }
 };
+
+void buildTree(KDNode* root) {
+   vector<pii> v;
+   for (int i=0; i<obj.size(); i++) {
+      tris += obj[i].tris.size();
+      for (int j=0; j<obj[i].tris.size(); j++)
+         v.push_back(pii(i, j));
+   }
+   // Determine inital bounds
+   Vec3d vmin(0), vmax(0);
+   for (int i=0; i<obj.size(); i++)
+      for (int j=0; j<obj[i].vert.size(); j++)
+         for (int k=0; k<3; k++) {
+            vmin[k] = min(vmin[k], obj[i].vert[j][k]);
+            vmax[k] = max(vmax[k], obj[i].vert[j][k]);
+         }
+   root->box.bnds[0] = vmin-Vec3d(0.01);
+   root->box.bnds[1] = vmax+Vec3d(0.01);
+   root->ind = v;
+   root->build(0);
+}

@@ -1,4 +1,3 @@
-// Headers
 // C
 #include <stdlib.h>
 #include <cfloat>
@@ -27,7 +26,6 @@
 
 using namespace std;
 
-// Types
 typedef long long ll;
 typedef unsigned char uc;
 typedef pair<int, int> pii;
@@ -36,7 +34,6 @@ typedef pair<ll, ll> plll;
 typedef pair<float, float> pff;
 typedef pair<double, double> pdd;
 
-// Structures
 template<typename T> struct Vec3 {
    T x, y, z;
    Vec3(): x(0), y(0), z(0) {}
@@ -45,7 +42,6 @@ template<typename T> struct Vec3 {
    T& operator[](const int i) { return i == 0 ? x : i ==1 ? y : z; }
 };
 
-// Custom Types
 typedef Vec3<uc> Vec3b;
 typedef Vec3<short> Vec3s;
 typedef Vec3<int> Vec3i;
@@ -54,7 +50,6 @@ typedef Vec3<ll> Vec3ll;
 typedef Vec3<float> Vec3f;
 typedef Vec3<double> Vec3d;
 
-// Utilities
 template <typename T> bool xcmp(const Vec3<T> &u, const Vec3<T> &v) {
    return u.x < v.x;
 }
@@ -77,7 +72,6 @@ template<typename T> void println(const Vec3<T> &u) {
    cout << u.x << ' ' << u.y << ' ' << u.z << '\n';
 }
 
-// Algebra
 template<typename T> Vec3<T> operator+(const Vec3<T> &u, const Vec3<T> &v) {
    return Vec3<T>(u.x + v.x, u.y + v.y, u.z + v.z);
 }
@@ -143,7 +137,6 @@ template<typename T> Vec3<T> cross(const Vec3<T> &u, const Vec3<T> &v) {
    return Vec3<T>(u.y*v.z-u.z*v.y, u.z*v.x-u.x*v.z, u.x*v.y-u.y*v.x);
 }
 
-// Physics
 template<typename T> Vec3<T> reflect(const Vec3<T> &u, const Vec3<T> &n) {
    return u - 2*dot(u, n)*n;
 }

@@ -8,21 +8,21 @@
 
 /Users/mmreed/Documents/CS/Raytrace/KDTree.cpp
 
-/Users/mmreed/Documents/CS/Raytrace/lights.cpp
+/Users/mmreed/Documents/CS/Raytrace/lighting.cpp
 
 /Users/mmreed/Documents/CS/Raytrace/main.cpp
-utilities.cpp
-/Users/mmreed/Documents/CS/Raytrace/utilities.cpp
-polygonMesh.cpp
-/Users/mmreed/Documents/CS/Raytrace/polygonMesh.cpp
-lights.cpp
-/Users/mmreed/Documents/CS/Raytrace/lights.cpp
 opencv2/opencv.hpp
 -
 boost/algorithm/string/classification.hpp
 -
 boost/algorithm/string/split.hpp
 -
+utilities.cpp
+/Users/mmreed/Documents/CS/Raytrace/utilities.cpp
+polygonMesh.cpp
+/Users/mmreed/Documents/CS/Raytrace/polygonMesh.cpp
+lighting.cpp
+/Users/mmreed/Documents/CS/Raytrace/lighting.cpp
 KDTree.cpp
 /Users/mmreed/Documents/CS/Raytrace/KDTree.cpp
 

@@ -1,4 +1,3 @@
-// Illumination
 class Light {
 public:
    double mag;
@@ -20,3 +19,23 @@ public:
       }
    }
 };
+
+// Global Illumination
+int Nsamples = 8;
+double pdf = 1/(2*M_PI);
+
+void createCoordSystem(const Vec3d &N, Vec3d &Nt, Vec3d &Nb) {
+   if (fabs(N.x) > fabs(N.y))
+      Nt = Vec3d(N.z, 0, -N.x)/sqrt(N.x*N.x+N.z*N.z);
+   else
+      Nt = Vec3d(0, -N.z, N.y)/sqrt(N.y*N.y+N.z*N.z);
+   Nb = cross(N, Nt);
+}
+
+Vec3d uniformSampleHemisphere(double &r1, double &r2) {
+   r1 = ((double)rand())/RAND_MAX;
+   r2 = ((double)rand())/RAND_MAX;
+   double sinTheta = sqrt(1 - r1*r1);
+   double phi = 2*M_PI*r2;
+   return Vec3d(sinTheta*cos(phi), r1, sinTheta*sin(phi));
+}

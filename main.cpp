@@ -1,11 +1,10 @@
-#include "utilities.cpp"
-#include "polygonMesh.cpp"
-#include "lights.cpp"
 #include <opencv2/opencv.hpp>
 #include <boost/algorithm/string/classification.hpp>
 #include <boost/algorithm/string/split.hpp>
+#include "utilities.cpp"
+#include "polygonMesh.cpp"
+#include "lighting.cpp"
 
-// Scene
 cv::Mat image(500, 500, CV_8UC3, cv::Scalar(210, 160, 30));
 Vec3d background(0.118, 0.627, 0.824);
 vector<PolygonMesh> obj;
@@ -13,15 +12,6 @@ vector<Light> light;
 double zoom = -1.0;
 Vec3d eye(-2.0, 5.5, 27.5);
 
-// KDTree
-#include "KDTree.cpp"
-KDNode* tree;
-Vec3d vmin(0), vmax(0);
-
-// Phong constants
-int PN = 4; double Ka = 0.4, Kd = 0.45, Ks = 0.15;
-
-// Initialization
 void init(string scene) {
    // OBJ File Reader
    ifstream reader("Scenes/"+scene+".txt");
@@ -66,12 +56,13 @@ void init(string scene) {
                      num = spc.size();
                   }
                   for (int j=1; j<sz-1; j++) {
-                     Triangle tri(Vec3i(data[0]-1, data[(j%sz)*num]-1, data[((j+1)%sz)*num]-1), Vec3i(-1), Vec3i(-1));
+                     Triangle tri(Vec3i(data[0]-1, data[j*num]-1, data[(j+1)*num]-1), Vec3i(-1), Vec3i(-1));
                      if (data.size()>1)
-                        tri.ni = Vec3i(data[1]-1, data[(j%sz)*num+1]-1, data[((j+1)%sz)*num+1]-1);
+                        tri.ni = Vec3i(data[1]-1, data[j*num+1]-1, data[(j+1)*num+1]-1);
                      if (data.size()>2)
-                        tri.ti = Vec3i(data[2]-1, data[(j%sz)*num+2]-1, data[((j+1)%sz)*num+2]-1);
+                        tri.ti = Vec3i(data[2]-1, data[j*num+2]-1, data[(j+1)*num+2]-1);
                      mesh.tris.push_back(tri);
+                     //mesh.cent.push_back(mesh.vert[tri.vi.x]);
                      mesh.cent.push_back((mesh.vert[tri.vi.x]+mesh.vert[tri.vi.y]+mesh.vert[tri.vi.z])/3.0);
                   }
                   break;
@@ -91,8 +82,6 @@ void init(string scene) {
       }
    }
 }
-
-// Naive
 bool trace(const Ray &ray, pii &tind, double &tmin, pdd &uv) {
    double t;
    bool found = false;
@@ -108,41 +97,25 @@ bool trace(const Ray &ray, pii &tind, double &tmin, pdd &uv) {
    return found;
 }
 
-void buildTree() {
-   vector<pii> v;
-   for (int i=0; i<obj.size(); i++)
-      for (int j=0; j<obj[i].tris.size(); j++)
-         v.push_back(pii(i, j));
-   for (int i=0; i<obj.size(); i++)
-      for (int j=0; j<obj[i].vert.size(); j++)
-         for (int k=0; k<3; k++) {
-            vmin[k] = min(vmin[k], obj[i].vert[j][k]);
-            vmax[k] = max(vmax[k], obj[i].vert[j][k]);
-         }
-   tree = new KDNode();
-   tree->box.bnds[0] = vmin-Vec3d(0.01);
-   tree->box.bnds[1] = vmax+Vec3d(0.01);
-   tree->ind = v;
-   tree->build(0);
-}
+// KDTree
+#include "KDTree.cpp"
+KDNode* tree = new KDNode();
+int MAX_DEPTH = 1;
 
 Vec3d castRay(const Ray &ray, const int depth) {
    pii tind; pdd uv;
    double tmin = FLT_MAX;
-   if (!tree->search(ray, tind, tmin, uv))
-   //if (!trace(ray, tind, tmin, uv))
-      return background;
+   if (!tree->search(ray, tind, tmin, uv)) {
+   // if (!trace(ray, tind, tmin, uv))
+      if (depth == 0)
+         return background;
+      return Vec3d(0);
+   }
    Vec3d hit, nrm;
    obj[tind.first].surfaceProperties(tind.second, ray, uv, nrm);
-   nrm = -nrm;
-   hit = ray.src + tmin*ray.dir + 0.01*nrm;
-
-   // reflection
-   // Vec3d ambient = obj->albedo*castRay(hit, reflect(ray, norm), depth-1)+(1.f-obj->albedo)*obj->color;
-
-   Vec3d ambient = obj[tind.first].albedo;
-   // Phong Model & shadows
-   Vec3d diffuse = Vec3d(), specular = Vec3d();
+   hit = ray.src + tmin*ray.dir + 0.001*nrm;
+   Vec3d direct = Vec3d(), indirect = Vec3d();
+   // Direct Lighting
    pii temp;
    for (int k=0; k<light.size(); k++) {
       Vec3d ldir, shade;
@@ -150,23 +123,33 @@ Vec3d castRay(const Ray &ray, const int depth) {
       light[k].illuminate(hit, ldir, shade, dis);
       Ray lray(hit, ldir);
       bool vis = !tree->search(lray, temp, dis, uv);
-      diffuse = diffuse + vis*max(0.0, dot(ldir, nrm))*shade;
-      specular = specular + vis*pow(max(0.0, dot(reflect(-ldir, nrm), -ray.dir)), PN)*shade;
+      direct = direct + vis*max(0.0, dot(ldir, nrm))*shade;
    }
-   return Ka*ambient+Kd*obj[tind.first].albedo*diffuse+Ks*specular;
-   /*
-   double ratio = max(0.0, dot(nrm, ray.dir));
-   return ratio*obj[tind.first].albedo;
-   */
+   // Additional Features
+   if (depth < MAX_DEPTH) {
+      // Indirect Lighting
+      Vec3d Nt, Nb;
+      createCoordSystem(nrm, Nt, Nb);
+      for (int i=0; i<Nsamples; i++) {
+         double r1, r2;
+         Vec3d sample = uniformSampleHemisphere(r1, r2);
+         Vec3d world(sample.x * Nb.x + sample.y * nrm.x + sample.z * Nt.x,
+                     sample.x * Nb.y + sample.y * nrm.y + sample.z * Nt.y,
+                     sample.x * Nb.z + sample.y * nrm.z + sample.z * Nt.z);
+         Ray iray(hit, world);
+         indirect = indirect + r1*castRay(iray, depth+1);
+      }
+   }
+   return obj[tind.first].albedo*(direct/M_PI + 2.0*indirect/(double)Nsamples);
 }
 
 void render() {
    for (int i=0; i<image.rows; i++)
       for (int j=0; j<image.cols; j++) {
-         // cout << i <<  ' ' << j << endl;
+         cout << i <<  ' ' << j << endl;
          Vec3d pxl(eye.x+0.5-(double)j/image.rows, eye.y+0.5-(double)i/image.rows, eye.z+zoom);
          Ray ray(eye, unit(pxl - eye));
-         Vec3d paint = castRay(ray, 1);
+         Vec3d paint = castRay(ray, 0);
          cv::Vec3b& color = image.at<cv::Vec3b>(i, j);
          // OpenCV uses BGR
          color[0] = min(255, (int)(255.0*paint.z));
@@ -180,10 +163,10 @@ int main() {
    cout << "READ" << endl;
    init(name);
    cout << "BUILD" << endl;
-   buildTree();
+   buildTree(tree);
    cout << "RENDER" << endl;
    render();
-   //cv::imshow("Scene", image);
-   //cv::imwrite("Images/"+name+".jpg", image);
-   //cv::waitKey(0);
+   cv::imshow("Scene", image);
+   cv::imwrite("Images/G"+name+".jpg", image);
+   cv::waitKey(0);
 }
