@@ -51,12 +51,12 @@ public:
    }
 
    void surfaceProperties(const int ind, const Ray &ray, const pdd &uv, Vec3d &nrm) {
-      /*Vec3i N = tris[ind].ni;
+      Vec3i N = tris[ind].ni;
       nrm = unit((1.0-uv.first-uv.second)*norm[N.x] + uv.first*norm[N.y] + uv.second*norm[N.z]);
-      */
+      /* Facing Normal
       Vec3i V = tris[ind].vi;
       Vec3d ba = vert[V.y] - vert[V.x];
       Vec3d ca = vert[V.z] - vert[V.x];
-      nrm = unit(cross(ca, ba));
+      nrm = unit(cross(ca, ba));*/
    }
 };

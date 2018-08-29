@@ -25,7 +25,7 @@ void init(string scene) {
       else if (type == 'O') {
          string name = data[1];
          ifstream meshReader("OBJ/"+name);
-         PolygonMesh mesh(Vec3d(stod(data[2]), stod(data[3]), stod(data[4])));
+         PolygonMesh mesh(Vec3d(1));
          string line;
          while(getline(meshReader, line)) {
             vector<string> tkns;
@@ -37,7 +37,7 @@ void init(string scene) {
                   break;
                }
                case 'n': {
-                  mesh.norm.push_back(unit(Vec3d(stod(tkns[3]), stod(tkns[2]), stod(tkns[1]))));
+                  mesh.norm.push_back(Vec3d(stod(tkns[3]), stod(tkns[2]), stod(tkns[1])));
                   break;
                }
                case 't': {
@@ -82,6 +82,7 @@ void init(string scene) {
       }
    }
 }
+
 bool trace(const Ray &ray, pii &tind, double &tmin, pdd &uv) {
    double t;
    bool found = false;
@@ -113,7 +114,7 @@ Vec3d castRay(const Ray &ray, const int depth) {
    }
    Vec3d hit, nrm;
    obj[tind.first].surfaceProperties(tind.second, ray, uv, nrm);
-   hit = ray.src + tmin*ray.dir + 0.001*nrm;
+   hit = ray.src + tmin*ray.dir + 0.01*nrm;
    Vec3d direct = Vec3d(), indirect = Vec3d();
    // Direct Lighting
    pii temp;
@@ -125,7 +126,7 @@ Vec3d castRay(const Ray &ray, const int depth) {
       bool vis = !tree->search(lray, temp, dis, uv);
       direct = direct + vis*max(0.0, dot(ldir, nrm))*shade;
    }
-   // Additional Features
+   /* Global Illumination
    if (depth < MAX_DEPTH) {
       // Indirect Lighting
       Vec3d Nt, Nb;
@@ -139,7 +140,7 @@ Vec3d castRay(const Ray &ray, const int depth) {
          Ray iray(hit, world);
          indirect = indirect + r1*castRay(iray, depth+1);
       }
-   }
+   }*/
    return obj[tind.first].albedo*(direct/M_PI + 2.0*indirect/(double)Nsamples);
 }
 
@@ -167,6 +168,6 @@ int main() {
    cout << "RENDER" << endl;
    render();
    cv::imshow("Scene", image);
-   cv::imwrite("Images/G"+name+".jpg", image);
+   // cv::imwrite("Images/G"+name+".jpg", image);
    cv::waitKey(0);
 }

@@ -1,7 +1,7 @@
 # type, file, RBG values
 O apple.txt 1 0.03 0
-O banana2.txt 1 0.882 0.208
 O banana1.txt 1 0.882 0.208
+O banana2.txt 1 0.882 0.208
 O cherry1.txt 1 0.271 0.271
 O cherry2.txt 1 0.271 0.271
 O grapebunch.txt 0 0.42 0.33
