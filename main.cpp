@@ -1,15 +1,16 @@
 #include <opencv2/opencv.hpp>
 #include <boost/algorithm/string/classification.hpp>
 #include <boost/algorithm/string/split.hpp>
+#include <chrono>
 #include "utilities.cpp"
 #include "polygonMesh.cpp"
 #include "lighting.cpp"
 
-cv::Mat image(500, 500, CV_8UC3, cv::Scalar(210, 160, 30));
+cv::Mat image(200, 200, CV_8UC3, cv::Scalar(210, 160, 30));
 Vec3d background(0.118, 0.627, 0.824);
 vector<PolygonMesh> obj;
 vector<Light> light;
-double zoom = -1.0;
+double zoom = -0.75;
 Vec3d eye(-2.0, 5.5, 27.5);
 
 void init(string scene) {
@@ -33,11 +34,11 @@ void init(string scene) {
             char type = tkns[0][tkns[0].size()-1];
             switch(type) {
                case 'v': {
-                  mesh.vert.push_back(Vec3d(stod(tkns[3]), stod(tkns[2]), stod(tkns[1])));
+                  mesh.vert.push_back(Vec3d(stod(tkns[1]), stod(tkns[2]), stod(tkns[3])));
                   break;
                }
                case 'n': {
-                  mesh.norm.push_back(Vec3d(stod(tkns[3]), stod(tkns[2]), stod(tkns[1])));
+                  mesh.norm.push_back(Vec3d(stod(tkns[1]), stod(tkns[2]), stod(tkns[3])));
                   break;
                }
                case 't': {
@@ -166,8 +167,15 @@ int main() {
    cout << "BUILD" << endl;
    buildTree(tree);
    cout << "RENDER" << endl;
+   // Record start time
+   auto start = std::chrono::high_resolution_clock::now();
    render();
+   cv::resize(image, image, cv::Size(400, 400), 2, 2, cv::INTER_CUBIC);
    cv::imshow("Scene", image);
-   // cv::imwrite("Images/G"+name+".jpg", image);
+   // Record end time
+   auto finish = std::chrono::high_resolution_clock::now();
+   chrono::duration<double> elapsed = finish - start;
+   cout << "Elapsed time: " << elapsed.count() << " s\n";
+   //cv::imwrite("Images/"+name+".bmp", image);
    cv::waitKey(0);
 }
