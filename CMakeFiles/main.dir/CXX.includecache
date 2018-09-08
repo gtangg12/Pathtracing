@@ -11,14 +11,6 @@
 /Users/mmreed/Documents/CS/Raytrace/lighting.cpp
 
 /Users/mmreed/Documents/CS/Raytrace/main.cpp
-opencv2/opencv.hpp
--
-boost/algorithm/string/classification.hpp
--
-boost/algorithm/string/split.hpp
--
-chrono
--
 utilities.cpp
 /Users/mmreed/Documents/CS/Raytrace/utilities.cpp
 polygonMesh.cpp
@@ -42,6 +34,8 @@ cstdlib
 ctime
 -
 algorithm
+-
+chrono
 -
 deque
 -
@@ -74,6 +68,12 @@ unordered_map
 unordered_set
 -
 utility
+-
+opencv2/opencv.hpp
+-
+boost/algorithm/string/classification.hpp
+-
+boost/algorithm/string/split.hpp
 -
 
 /usr/local/include/boost/algorithm/string/classification.hpp

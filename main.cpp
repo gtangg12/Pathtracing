@@ -1,20 +1,16 @@
-#include <opencv2/opencv.hpp>
-#include <boost/algorithm/string/classification.hpp>
-#include <boost/algorithm/string/split.hpp>
-#include <chrono>
 #include "utilities.cpp"
 #include "polygonMesh.cpp"
 #include "lighting.cpp"
 
-cv::Mat image(200, 200, CV_8UC3, cv::Scalar(210, 160, 30));
+cv::Mat image(300, 300, CV_8UC3, cv::Scalar(210, 160, 30));
 Vec3d background(0.118, 0.627, 0.824);
 vector<PolygonMesh> obj;
 vector<Light> light;
-double zoom = -0.75;
-Vec3d eye(-2.0, 5.5, 27.5);
+double zoom = -3.0;
+Vec3d eye(-2.0, 3.0, 27.5);
 
 void init(string scene) {
-   // OBJ File Reader
+   // Scene File Reader
    ifstream reader("Scenes/"+scene+".txt");
    string input;
    while(getline(reader, input)) {
@@ -25,8 +21,10 @@ void init(string scene) {
          continue;
       else if (type == 'O') {
          string name = data[1];
+         cv::Mat tmap = cv::imread("TXT/"+data[5], CV_LOAD_IMAGE_COLOR);
+         PolygonMesh mesh(Vec3d(1), tmap);
+         // OBJ File Reader
          ifstream meshReader("OBJ/"+name);
-         PolygonMesh mesh(Vec3d(1));
          string line;
          while(getline(meshReader, line)) {
             vector<string> tkns;
@@ -42,7 +40,7 @@ void init(string scene) {
                   break;
                }
                case 't': {
-                  mesh.text.push_back(pff(stod(tkns[1]), stod(tkns[2])));
+                  mesh.text.push_back(pdd(stod(tkns[1]), stod(tkns[2])));
                   break;
                }
                case 'f': {
@@ -59,9 +57,9 @@ void init(string scene) {
                   for (int j=1; j<sz-1; j++) {
                      Triangle tri(Vec3i(data[0]-1, data[j*num]-1, data[(j+1)*num]-1), Vec3i(-1), Vec3i(-1));
                      if (data.size()>1)
-                        tri.ni = Vec3i(data[1]-1, data[j*num+1]-1, data[(j+1)*num+1]-1);
+                        tri.ti = Vec3i(data[1]-1, data[j*num+1]-1, data[(j+1)*num+1]-1);
                      if (data.size()>2)
-                        tri.ti = Vec3i(data[2]-1, data[j*num+2]-1, data[(j+1)*num+2]-1);
+                        tri.ni = Vec3i(data[2]-1, data[j*num+2]-1, data[(j+1)*num+2]-1);
                      mesh.tris.push_back(tri);
                      //mesh.cent.push_back(mesh.vert[tri.vi.x]);
                      mesh.cent.push_back((mesh.vert[tri.vi.x]+mesh.vert[tri.vi.y]+mesh.vert[tri.vi.z])/3.0);
@@ -83,7 +81,6 @@ void init(string scene) {
       }
    }
 }
-
 bool trace(const Ray &ray, pii &tind, double &tmin, pdd &uv) {
    double t;
    bool found = false;
@@ -98,7 +95,6 @@ bool trace(const Ray &ray, pii &tind, double &tmin, pdd &uv) {
          }
    return found;
 }
-
 // KDTree
 #include "KDTree.cpp"
 KDNode* tree = new KDNode();
@@ -108,14 +104,14 @@ Vec3d castRay(const Ray &ray, const int depth) {
    pii tind; pdd uv;
    double tmin = FLT_MAX;
    if (!tree->search(ray, tind, tmin, uv)) {
-   // if (!trace(ray, tind, tmin, uv))
+   //if (!trace(ray, tind, tmin, uv)) {
       if (depth == 0)
          return background;
       return Vec3d(0);
    }
-   Vec3d hit, nrm;
-   obj[tind.first].surfaceProperties(tind.second, ray, uv, nrm);
-   hit = ray.src + tmin*ray.dir + 0.01*nrm;
+   Vec3d hit, nrm, txt;
+   obj[tind.first].surfaceProperties(tind.second, ray, uv, nrm, txt);
+   hit = ray.src + tmin*ray.dir + 0.001*nrm;
    Vec3d direct = Vec3d(), indirect = Vec3d();
    // Direct Lighting
    pii temp;
@@ -127,7 +123,8 @@ Vec3d castRay(const Ray &ray, const int depth) {
       bool vis = !tree->search(lray, temp, dis, uv);
       direct = direct + vis*max(0.0, dot(ldir, nrm))*shade;
    }
-   /* Global Illumination
+   /*
+   // Global Illumination
    if (depth < MAX_DEPTH) {
       // Indirect Lighting
       Vec3d Nt, Nb;
@@ -142,13 +139,13 @@ Vec3d castRay(const Ray &ray, const int depth) {
          indirect = indirect + r1*castRay(iray, depth+1);
       }
    }*/
-   return obj[tind.first].albedo*(direct/M_PI + 2.0*indirect/(double)Nsamples);
+   return txt*obj[tind.first].albedo*(direct/M_PI + 2.0*indirect/(double)Nsamples);
 }
 
 void render() {
    for (int i=0; i<image.rows; i++)
       for (int j=0; j<image.cols; j++) {
-         cout << i <<  ' ' << j << endl;
+         //cout << i <<  ' ' << j << endl;
          Vec3d pxl(eye.x+0.5-(double)j/image.rows, eye.y+0.5-(double)i/image.rows, eye.z+zoom);
          Ray ray(eye, unit(pxl - eye));
          Vec3d paint = castRay(ray, 0);
@@ -170,12 +167,12 @@ int main() {
    // Record start time
    auto start = std::chrono::high_resolution_clock::now();
    render();
-   cv::resize(image, image, cv::Size(400, 400), 2, 2, cv::INTER_CUBIC);
+   auto finish = std::chrono::high_resolution_clock::now();
+   //cv::resize(image, image, cv::Size(400, 400), 2, 2, cv::INTER_CUBIC);
    cv::imshow("Scene", image);
    // Record end time
-   auto finish = std::chrono::high_resolution_clock::now();
    chrono::duration<double> elapsed = finish - start;
    cout << "Elapsed time: " << elapsed.count() << " s\n";
-   //cv::imwrite("Images/"+name+".bmp", image);
+   cv::imwrite("Images/"+name+".bmp", image);
    cv::waitKey(0);
 }

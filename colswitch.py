@@ -1,4 +1,4 @@
-files = ['banana1.txt', 'banana2.txt']
+files = ['pear.txt']
 
 for file in files:
     fin = open('OBJ/'+file, 'r')
