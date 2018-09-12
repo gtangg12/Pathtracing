@@ -6,7 +6,7 @@
 
 #IncludeRegexTransform: 
 
-/Users/mmreed/Documents/CS/Raytrace/KDTree.cpp
+/Users/mmreed/Documents/CS/Raytrace/kdtree.cpp
 
 /Users/mmreed/Documents/CS/Raytrace/lighting.cpp
 
@@ -17,8 +17,8 @@ polygonMesh.cpp
 /Users/mmreed/Documents/CS/Raytrace/polygonMesh.cpp
 lighting.cpp
 /Users/mmreed/Documents/CS/Raytrace/lighting.cpp
-KDTree.cpp
-/Users/mmreed/Documents/CS/Raytrace/KDTree.cpp
+kdtree.cpp
+/Users/mmreed/Documents/CS/Raytrace/kdtree.cpp
 
 /Users/mmreed/Documents/CS/Raytrace/polygonMesh.cpp
 

@@ -2,12 +2,11 @@
 #include "polygonMesh.cpp"
 #include "lighting.cpp"
 
-cv::Mat image(300, 300, CV_8UC3, cv::Scalar(210, 160, 30));
+cv::Mat image(200, 200, CV_8UC3, cv::Scalar(210, 160, 30));
 Vec3d background(0.118, 0.627, 0.824);
 vector<PolygonMesh> obj;
 vector<Light> light;
-double zoom = -3.0;
-Vec3d eye(-2.0, 3.0, 27.5);
+double zoom = 1.0;
 
 void init(string scene) {
    // Scene File Reader
@@ -21,8 +20,8 @@ void init(string scene) {
          continue;
       else if (type == 'O') {
          string name = data[1];
-         cv::Mat tmap = cv::imread("TXT/"+data[5], CV_LOAD_IMAGE_COLOR);
-         PolygonMesh mesh(Vec3d(1), tmap);
+         //cv::Mat tmap = cv::imread("TXT/"+data[5], CV_LOAD_IMAGE_COLOR);
+         PolygonMesh mesh(Vec3d(1)); //tmap
          // OBJ File Reader
          ifstream meshReader("OBJ/"+name);
          string line;
@@ -57,9 +56,9 @@ void init(string scene) {
                   for (int j=1; j<sz-1; j++) {
                      Triangle tri(Vec3i(data[0]-1, data[j*num]-1, data[(j+1)*num]-1), Vec3i(-1), Vec3i(-1));
                      if (data.size()>1)
-                        tri.ti = Vec3i(data[1]-1, data[j*num+1]-1, data[(j+1)*num+1]-1);
+                        tri.ni = Vec3i(data[1]-1, data[j*num+1]-1, data[(j+1)*num+1]-1);
                      if (data.size()>2)
-                        tri.ni = Vec3i(data[2]-1, data[j*num+2]-1, data[(j+1)*num+2]-1);
+                        tri.ti = Vec3i(data[2]-1, data[j*num+2]-1, data[(j+1)*num+2]-1);
                      mesh.tris.push_back(tri);
                      //mesh.cent.push_back(mesh.vert[tri.vi.x]);
                      mesh.cent.push_back((mesh.vert[tri.vi.x]+mesh.vert[tri.vi.y]+mesh.vert[tri.vi.z])/3.0);
@@ -96,7 +95,7 @@ bool trace(const Ray &ray, pii &tind, double &tmin, pdd &uv) {
    return found;
 }
 // KDTree
-#include "KDTree.cpp"
+#include "kdtree.cpp"
 KDNode* tree = new KDNode();
 int MAX_DEPTH = 1;
 
@@ -110,7 +109,7 @@ Vec3d castRay(const Ray &ray, const int depth) {
       return Vec3d(0);
    }
    Vec3d hit, nrm, txt;
-   obj[tind.first].surfaceProperties(tind.second, ray, uv, nrm, txt);
+   obj[tind.first].surfaceProperties(tind.second, ray, uv, nrm); //txt
    hit = ray.src + tmin*ray.dir + 0.001*nrm;
    Vec3d direct = Vec3d(), indirect = Vec3d();
    // Direct Lighting
@@ -139,14 +138,16 @@ Vec3d castRay(const Ray &ray, const int depth) {
          indirect = indirect + r1*castRay(iray, depth+1);
       }
    }*/
-   return txt*obj[tind.first].albedo*(direct/M_PI + 2.0*indirect/(double)Nsamples);
+   return obj[tind.first].albedo*(direct/M_PI + 2.0*indirect/(double)Nsamples); //txt
 }
 
-void render() {
-   for (int i=0; i<image.rows; i++)
+void render(const Vec3d &eye, const double angle) {
+   for (int i=0; i<image.rows; i++) {
+      #pragma omp parallel for
       for (int j=0; j<image.cols; j++) {
          //cout << i <<  ' ' << j << endl;
-         Vec3d pxl(eye.x+0.5-(double)j/image.rows, eye.y+0.5-(double)i/image.rows, eye.z+zoom);
+         Vec3d pxl(0.5-(double)j/image.rows, 0.5-(double)i/image.rows, zoom);
+         pxl = Vec3d(eye.x+sin(angle)*pxl.x+cos(angle)*pxl.z,  eye.y+pxl.y, eye.z-cos(angle)*pxl.x+sin(angle)*pxl.z);
          Ray ray(eye, unit(pxl - eye));
          Vec3d paint = castRay(ray, 0);
          cv::Vec3b& color = image.at<cv::Vec3b>(i, j);
@@ -155,24 +156,53 @@ void render() {
          color[1] = min(255, (int)(255.0*paint.y));
          color[2] = min(255, (int)(255.0*paint.x));
       }
+   }
 }
 
 int main() {
-   string name = "fruit";
-   cout << "READ" << endl;
+   string name = "cube";
    init(name);
-   cout << "BUILD" << endl;
    buildTree(tree);
-   cout << "RENDER" << endl;
-   // Record start time
-   auto start = std::chrono::high_resolution_clock::now();
-   render();
-   auto finish = std::chrono::high_resolution_clock::now();
-   //cv::resize(image, image, cv::Size(400, 400), 2, 2, cv::INTER_CUBIC);
-   cv::imshow("Scene", image);
-   // Record end time
-   chrono::duration<double> elapsed = finish - start;
-   cout << "Elapsed time: " << elapsed.count() << " s\n";
-   cv::imwrite("Images/"+name+".bmp", image);
-   cv::waitKey(0);
+   double step = 0.5, astep = 0.01745329251; //1 degree
+   double angle = M_PI/2;
+   Vec3d eye(11.5, 11.5, -9.5);
+   int c;
+   while(true) {
+      println(eye);
+      cout << angle << endl;
+
+      render(eye, angle);
+      cv::resize(image, image, cv::Size(600, 600), 3, 3, cv::INTER_CUBIC);
+      cv::imshow("Scene", image);
+      c = cv::waitKey(0);
+      switch(c) {
+         case 119: { // W
+            eye = eye+Vec3d(cos(angle)*step, 0, sin(angle)*step);
+            break;
+         }
+         case 97: { // A
+            eye = eye-Vec3d(-sin(angle)*step, 0, cos(angle)*step);
+            break;
+         }
+         case 115: { // S
+            eye = eye-Vec3d(cos(angle)*step, 0, sin(angle)*step);
+            break;
+         }
+         case 100: { // D
+            eye = eye+Vec3d(-sin(angle)*step, 0, cos(angle)*step);
+            break;
+         }
+         case 2: { // LEFT
+            angle-=astep;
+            break;
+         }
+         case 3: { // RIGHT
+            angle+=astep;
+            break;
+         }
+      }
+   }
+   //cv::imshow("Scene", image);
+   //cv::imwrite("Images/"+name+".bmp", image);
+   //cv::waitKey(0);
 }

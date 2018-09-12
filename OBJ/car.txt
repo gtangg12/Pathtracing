@@ -1,4 +1,3 @@
-# This file uses centimeters as units for non-parametric coordinates.
 v 101.945374 13.799507 -60.058113
 v 70.737106 91.680969 -62.193806
 v 63.386383 109.174873 -53.473663
