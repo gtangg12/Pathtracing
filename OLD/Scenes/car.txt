@@ -1,0 +1,3 @@
+# type, file, RBG values
+O car.txt 1 1 1 car.jpg
+# type, light, pos, RGB values, intensity

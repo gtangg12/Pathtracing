@@ -1,0 +1,10 @@
+# type, file, RBG values
+O bedroom.txt
+# type, light, pos, RGB values
+L d 1 1 1 1 1 1 3
+L d -1 -1 -1 1 1 1 3
+
+
+#door_frame
+#door-
+#plagat1

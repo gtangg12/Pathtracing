@@ -15,7 +15,8 @@ public:
 class Triangle {
 public:
    Vec3i vi, ni, ti;
-   Triangle(const Vec3i &vi, const Vec3i &ni, const Vec3i &ti): vi(vi), ni(ni), ti(ti) {}
+   int tm;
+   Triangle(const Vec3i &vi, const Vec3i &ni, const Vec3i &ti, const int tm): vi(vi), ni(ni), ti(ti), tm(tm) {}
 };
 
 class PolygonMesh {
@@ -24,10 +25,10 @@ public:
    vector<Vec3d> vert;
    vector<Vec3d> norm;
    vector<pdd> text;
-   //cv::Mat tmap;
+   vector<cv::Mat> tmaps;
    vector<Vec3d> cent;
    vector<Triangle> tris;
-   PolygonMesh(const Vec3d &albedo): albedo(albedo) {} //const cv::Mat &tmap, tmap(tmap)
+   PolygonMesh(const Vec3d &albedo): albedo(albedo) {}
 
    bool intersect(const int ind, const Ray &ray, double &t, pdd &uv) {
       Vec3i V = tris[ind].vi;
@@ -51,23 +52,25 @@ public:
       return true;
    }
 
-   void surfaceProperties(const int ind, const Ray &ray, const pdd &uv, Vec3d &nrm) { //Vec3d &txt
+   void surfaceProperties(const int ind, const Ray &ray, const pdd &uv, Vec3d &nrm, Vec3d &txt) {
       // Normal
       Vec3i N = tris[ind].ni;
       nrm = unit((1.0-uv.first-uv.second)*norm[N.x] + uv.first*norm[N.y] + uv.second*norm[N.z]);
-      /* Facing Normal
-      Vec3i V = tris[ind].vi;
-      Vec3d ba = vert[V.y] - vert[V.x];
-      Vec3d ca = vert[V.z] - vert[V.x];
-      nrm = unit(cross(ca, ba));*/
+      // No texture option
+      if (tris[ind].tm == -1) {
+         txt = Vec3d(1);
+         return;
+      }
       // Texture
-      /*
       Vec3i T = tris[ind].ti;
       Vec3d color[3];
       for (int i=0; i<3; i++) {
-         cv::Vec3b temp = tmap.at<cv::Vec3b>(cv::Point((int)(text[T[i]].first*tmap.rows), (int)(text[T[i]].second*tmap.cols)));
-         color[i] = Vec3d(temp[2], temp[1], temp[0]);
+         cv::Mat &tref = tmaps[tris[ind].tm];
+         // must be square
+         cv::Vec3b temp = tref.at<cv::Vec3b>(cv::Point((int)(text[T[i]].first*tref.rows),
+                                                       (int)(text[T[i]].second*tref.rows)));
+         color[i] = Vec3d(temp[2], temp[1], temp[0]); // BGR
       }
-      txt = (bary[0]*color[0] + bary[1]*color[1] + bary[2]*color[2])/256.0;*/
+      txt = ((1.0-uv.first-uv.second)*color[0] + uv.first*color[1] + uv.second*color[2])/256.0;
    }
 };

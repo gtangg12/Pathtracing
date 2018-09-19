@@ -1,0 +1,13 @@
+# type, file, RBG values
+O apple.txt
+O cherry1.txt
+O cherry2.txt
+O grapesbunch.txt
+O loosegrapes.txt
+O misc.txt
+O orange.txt
+O pear.txt
+O plate.txt
+O sheet.txt
+# type, light, pos, RGB values
+L d 0 1 0 1 1 1 3
