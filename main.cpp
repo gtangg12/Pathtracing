@@ -23,16 +23,19 @@ void init(string scene) {
          // OBJ File Reader
          ifstream meshReader(scene+"/"+name);
          string line;
-         int tcnt = -1; //tmap #
+         int tcnt = 0; //tmap #
          while(getline(meshReader, line)) {
+            int tval = -1;
             vector<string> tkns;
             boost::split(tkns, line, boost::is_any_of(" "), boost::token_compress_on);
             char type = tkns[0][tkns[0].size()-1];
             switch(type) {
                /*case 'g': {
-                  cv::Mat tmap = cv::imread(scene+"/TXT/"+tkns[1]+".jpg", CV_LOAD_IMAGE_COLOR);
-                  mesh.tmaps.push_back(tmap);
-                  tcnt++;
+                  if (tkns[2][0] == '-') {
+                     cv::Mat tmap = cv::imread(scene+"/TXT/"+tkns[1]+".jpg", CV_LOAD_IMAGE_COLOR);
+                     mesh.tmaps.push_back(tmap);
+                     tval = tcnt++;
+                  }
                   break;
                }*/
                case 'v': {
@@ -58,8 +61,9 @@ void init(string scene) {
                         data.push_back(stoi(spc[k]));
                      num = spc.size();
                   }
+                  // face, normal, texture
                   for (int j=1; j<sz-1; j++) {
-                     Triangle tri(Vec3i(data[0]-1, data[j*num]-1, data[(j+1)*num]-1), Vec3i(-1), Vec3i(-1), tcnt);
+                     Triangle tri(Vec3i(data[0]-1, data[j*num]-1, data[(j+1)*num]-1), Vec3i(-1), Vec3i(-1), tval);
                      if (num > 2) {
                         tri.ti = Vec3i(data[1]-1, data[j*num+1]-1, data[(j+1)*num+1]-1);
                         tri.ni = Vec3i(data[2]-1, data[j*num+2]-1, data[(j+1)*num+2]-1);
@@ -151,9 +155,10 @@ Vec3d castRay(const Ray &ray, const int depth) {
 
 void render(const Vec3d &eye, const double zoom, const double angle) {
    for (int i=0; i<image.rows; i++) {
-      #pragma omp parallel for
+      //#pragma omp parallel for
       for (int j=0; j<image.cols; j++) {
          Vec3d paint(0);
+         //cout << i << ' ' << j << endl;
          // ray-bundle tracing, GI = 9
          double x = 0, y = 0;
          //for (y=-0.1; y<=0.1; y+=0.2)
@@ -174,11 +179,11 @@ void render(const Vec3d &eye, const double zoom, const double angle) {
 }
 
 int main() {
-   string name = "fruit";
+   string name = "room";
    init(name);
    buildTree(tree);
-   double step = 0.5, astep = 0.01745329251, angle = M_PI/2, zoom = -1.0;
-   Vec3d eye(-2.0, 4.0, 25.5);
+   double step = 40, astep = 5*0.01745329251, angle = M_PI/2, zoom = 1.0; //1 degree
+   Vec3d eye(0.0, 180.0, -750);
    int c = 0, sumT = 0;
    for (int i=0; i<obj.size(); i++)
       sumT+=obj[i].tris.size();

@@ -38,7 +38,6 @@ public:
    bool leaf;
    KDNode *left, *right;
    vector<pii> ind; // Mesh, Triangle
-
    KDNode(): leaf(false) {}
 
    void build(const int depth) {
@@ -84,7 +83,7 @@ public:
       left->build(depth+1);
       right->build(depth+1);
    }
-   
+
    bool search(const Ray &ray, pii &tind, double &tmin, pdd &uv) {
       if (!box.intersect(ray))
          return false;

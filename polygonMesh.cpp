@@ -55,7 +55,8 @@ public:
    void surfaceProperties(const int ind, const Ray &ray, const pdd &uv, Vec3d &nrm, Vec3d &txt) {
       // Normal
       Vec3i N = tris[ind].ni;
-      nrm = unit((1.0-uv.first-uv.second)*norm[N.x] + uv.first*norm[N.y] + uv.second*norm[N.z]);
+      double w = 1.0-uv.first-uv.second;
+      nrm = unit(w*norm[N.x] + uv.first*norm[N.y] + uv.second*norm[N.z]);
       // No texture option
       if (tris[ind].tm == -1) {
          txt = Vec3d(1);
@@ -71,6 +72,6 @@ public:
                                                        (int)(text[T[i]].second*tref.rows)));
          color[i] = Vec3d(temp[2], temp[1], temp[0]); // BGR
       }
-      txt = ((1.0-uv.first-uv.second)*color[0] + uv.first*color[1] + uv.second*color[2])/256.0;
+      txt = (w*color[0] + uv.first*color[1] + uv.second*color[2])/256.0;
    }
 };
