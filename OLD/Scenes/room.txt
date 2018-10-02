@@ -1,4 +1,0 @@
-# type, file, RBG values
-O room.txt
-# type, light, pos, RGB values
-L d 0 1 0 1 1 1 3

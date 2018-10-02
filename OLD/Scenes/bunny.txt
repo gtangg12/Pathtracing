@@ -1,5 +1,0 @@
-# type, file, RBG values
-O bunny.txt 0.8 0.3 0.1
-# type, light, pos, RGB values, intensity
-L d 1 0.5 1 1 1 1 1 3
-L p 1.5 0.1 -0.1 1 1 1 50.0

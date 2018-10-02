@@ -24,11 +24,22 @@ public:
          return false;
       return true;
    }
+
+   double surfaceArea() {
+      double l = bnds[1].x - bnds[0].x;
+      double w = bnds[1].y - bnds[0].y;
+      double h = bnds[1].z - bnds[0].z;
+      return 2.0*(l*w+w*h+l*h);
+   }
 };
 
 // Stats
 int tris = 0;
 int sum = 0;
+
+// SAH
+double trav = 7.0;
+double inst = 5.0;
 
 class KDNode {
 public:
@@ -54,10 +65,27 @@ public:
       for (int i=0; i<ind.size(); i++)
          pnts.push_back(obj[pms].cent[trg]);
       sort(pnts.begin(), pnts.end(), func[axis]);
-      splt = pnts[pnts.size()/2][axis];
+      // Naive Median
+      //splt = pnts[pnts.size()/2][axis];
       // Update bounding box
       copy(begin(box.bnds), end(box.bnds), begin(left->box.bnds));
       copy(begin(box.bnds), end(box.bnds), begin(right->box.bnds));
+      // SA Heuristic
+      double minv = DBL_MAX;
+      double curr, cost;
+      double sa = box.surfaceArea();
+      for (int i=0; i<pnts.size(); i++) {
+         curr = pnts[i][axis];
+         left->box.bnds[1][axis] = curr;
+         right->box.bnds[0][axis] = curr;
+         double lsa = left->box.surfaceArea();
+         double rsa = right->box.surfaceArea();
+         cost = trav + lsa/sa*(i+1)*inst + rsa/sa*(pnts.size()-i-1)*inst;
+         if (cost < minv) {
+            minv = cost;
+            splt = curr;
+         }
+      }
       left->box.bnds[1][axis] = splt;
       right->box.bnds[0][axis] = splt;
       // Assign triangles based on locations of vert relative to splt
@@ -66,8 +94,8 @@ public:
          bool l = false, r = false;
          for (int j=0; j<3; j++) {
             Vec3d pnt = obj[pms].vert[V[j]];
-            l = pnt[axis]<=splt ? true : l;
-            r = pnt[axis]>splt ? true : r;
+            l = pnt[axis] <= splt ? true : l;
+            r = pnt[axis] >= splt ? true : r;
          }
          if (l) left->ind.push_back(ind[i]);
          if (r) right->ind.push_back(ind[i]);

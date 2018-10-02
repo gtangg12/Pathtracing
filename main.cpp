@@ -6,6 +6,8 @@ cv::Mat image(300, 300, CV_8UC3, cv::Scalar(210, 160, 30));
 Vec3d background(0.118, 0.627, 0.824);
 vector<PolygonMesh> obj;
 vector<Light> light;
+double step, astep, angle, zoom;
+Vec3d eye(0);
 
 void init(string scene) {
    // Scene File Reader
@@ -17,6 +19,14 @@ void init(string scene) {
       char type = data[0][0];
       if (type == '#')
          continue;
+      else if (type == 'C') {
+         double ud = 0.01745329251;
+         eye = Vec3d(stod(data[1]), stod(data[2]), stod(data[3]));
+         step = stod(data[4]);
+         astep = ud*stod(data[5]);
+         angle = ud*stod(data[6]);
+         zoom = stod(data[7]);
+      }
       else if (type == 'O') {
          string name = data[1];
          PolygonMesh mesh(Vec3d(1));
@@ -153,7 +163,7 @@ Vec3d castRay(const Ray &ray, const int depth) {
    return txt*obj[tind.first].albedo*(direct/M_PI + 2.0*indirect/(double)Nsamples);
 }
 
-void render(const Vec3d &eye, const double zoom, const double angle) {
+void render(const Vec3d &src, const double zoom, const double angle) {
    for (int i=0; i<image.rows; i++) {
       //#pragma omp parallel for
       for (int j=0; j<image.cols; j++) {
@@ -161,14 +171,14 @@ void render(const Vec3d &eye, const double zoom, const double angle) {
          //cout << i << ' ' << j << endl;
          // ray-bundle tracing, GI = 9
          double x = 0, y = 0;
-         //for (y=-0.1; y<=0.1; y+=0.2)
-            //for (x=-0.1; x<=0.1; x+=0.2) {
+         //for (y=-0.1; y<=0.1; y+=0.1)
+            //for (x=-0.1; x<=0.1; x+=0.1) {
                Vec3d pxl(0.5-(double)(j+x)/image.rows, 0.5-(double)(i+y)/image.rows, zoom);
-               Vec3d snk = Vec3d(eye.x+sin(angle)*pxl.x+cos(angle)*pxl.z,  eye.y+pxl.y, eye.z-cos(angle)*pxl.x+sin(angle)*pxl.z);
-               Ray ray(eye, unit(snk - eye));
+               Vec3d snk = Vec3d(src.x+sin(angle)*pxl.x+cos(angle)*pxl.z,  src.y+pxl.y, src.z-cos(angle)*pxl.x+sin(angle)*pxl.z);
+               Ray ray(src, unit(snk - src));
                paint = paint + castRay(ray, 0);
             //}
-         //paint = paint/4.0;
+         //paint = paint/9.0;
          cv::Vec3b& color = image.at<cv::Vec3b>(i, j);
          // OpenCV uses BGR
          color[0] = min(255, (int)(255.0*paint.z));
@@ -182,22 +192,20 @@ int main() {
    string name = "room";
    init(name);
    buildTree(tree);
-   double step = 40, astep = 5*0.01745329251, angle = M_PI/2, zoom = 1.0; //1 degree
-   Vec3d eye(0.0, 180.0, -750);
    int c = 0, sumT = 0;
    for (int i=0; i<obj.size(); i++)
       sumT+=obj[i].tris.size();
    cout << "Triangles: " << sumT << endl;
    while(true) {
-      println(eye);
-      cout << angle << endl;
+      //println(eye);
+      //cout << angle << endl;
       auto start = std::chrono::high_resolution_clock::now();
       render(eye, zoom, angle);
       auto finish = std::chrono::high_resolution_clock::now();
       chrono::duration<double> elapsed = finish - start;
       cout << "Elapsed time: " << elapsed.count() << " s\n";
       cv::imshow("Scene", image);
-      cv::imwrite("Images/"+name+".bmp", image);
+      //cv::imwrite("Images/"+name+".bmp", image);
       c = cv::waitKey(0);
       // Movement
       switch(c) {
@@ -227,6 +235,4 @@ int main() {
          }
       }
    }
-   //cv::imshow("Scene", image);
-   //cv::waitKey(0);
 }

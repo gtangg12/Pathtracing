@@ -1,8 +1,9 @@
 # type, file, RBG values
+C 50 150 0 40 5 135 0.5
 O bedroom.txt
 # type, light, pos, RGB values
-L d 1 1 1 1 1 1 7
-L p 0 200 -2.5 1 1 1 500000
+L d 1 1 0 1 1 1 10
+L p 0 165 -2.5 1 1 1 1750000
 
 #door_frame
 #door-
@@ -99,3 +100,35 @@ L p 0 200 -2.5 1 1 1 500000
 #mouse_base-
 #polySurface10895-
 #backwall
+#walls
+#amp_knobs-
+#guitar
+#guitar_notes-
+#guitar_plisky-
+#guitar_buttons-
+#guitar_cover
+#guitar_metal-
+#keyboard-
+#mouse_button
+#laptop-
+#lamp_bulb
+#lamp_shade
+#lamp_socket
+#chair
+#lamp_base
+#pc-
+#musmatta
+#mus_sladd
+#mouse
+#keyboard_keys-
+#keyboard1-
+#amp_details-
+#knobs-
+#dresser_surfaces-
+#polySurface10931-
+#cl_fillament-
+#cl_fixture-
+#polySurface10932-
+#polySurface10933-
+#door_hardware-
+#monitor_screen

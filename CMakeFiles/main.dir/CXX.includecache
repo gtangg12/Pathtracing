@@ -6,23 +6,23 @@
 
 #IncludeRegexTransform: 
 
-/Users/mmreed/Documents/CS/Raytrace/kdtree.cpp
+/Users/mmreed/Documents/CS/STS/Raytrace/kdtree.cpp
 
-/Users/mmreed/Documents/CS/Raytrace/lighting.cpp
+/Users/mmreed/Documents/CS/STS/Raytrace/lighting.cpp
 
-/Users/mmreed/Documents/CS/Raytrace/main.cpp
+/Users/mmreed/Documents/CS/STS/Raytrace/main.cpp
 utilities.cpp
-/Users/mmreed/Documents/CS/Raytrace/utilities.cpp
+/Users/mmreed/Documents/CS/STS/Raytrace/utilities.cpp
 polygonMesh.cpp
-/Users/mmreed/Documents/CS/Raytrace/polygonMesh.cpp
+/Users/mmreed/Documents/CS/STS/Raytrace/polygonMesh.cpp
 lighting.cpp
-/Users/mmreed/Documents/CS/Raytrace/lighting.cpp
+/Users/mmreed/Documents/CS/STS/Raytrace/lighting.cpp
 kdtree.cpp
-/Users/mmreed/Documents/CS/Raytrace/kdtree.cpp
+/Users/mmreed/Documents/CS/STS/Raytrace/kdtree.cpp
 
-/Users/mmreed/Documents/CS/Raytrace/polygonMesh.cpp
+/Users/mmreed/Documents/CS/STS/Raytrace/polygonMesh.cpp
 
-/Users/mmreed/Documents/CS/Raytrace/utilities.cpp
+/Users/mmreed/Documents/CS/STS/Raytrace/utilities.cpp
 stdlib.h
 -
 cfloat
