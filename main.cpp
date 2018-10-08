@@ -2,8 +2,9 @@
 #include "polygonMesh.cpp"
 #include "lighting.cpp"
 
-cv::Mat image(300, 300, CV_8UC3, cv::Scalar(210, 160, 30));
-Vec3d background(0.118, 0.627, 0.824);
+cv::Mat image(1024, 1024, CV_8UC3, cv::Scalar(210, 160, 30));
+//Vec3d background(0.118, 0.627, 0.824);
+Vec3d background(1);
 vector<PolygonMesh> obj;
 vector<Light> light;
 double step, astep, angle, zoom;
@@ -13,12 +14,16 @@ void init(string scene) {
    // Scene File Reader
    ifstream reader(scene+"/master.txt");
    string input;
+   vector<string> files;
+   unordered_map<string, string> tarr;
    while(getline(reader, input)) {
       vector<string> data;
       boost::split(data, input, boost::is_any_of(" "), boost::token_compress_on);
       char type = data[0][0];
       if (type == '#')
          continue;
+      else if (type == '%') // force quit
+         break;
       else if (type == 'C') {
          double ud = 0.01745329251;
          eye = Vec3d(stod(data[1]), stod(data[2]), stod(data[3]));
@@ -27,70 +32,8 @@ void init(string scene) {
          angle = ud*stod(data[6]);
          zoom = stod(data[7]);
       }
-      else if (type == 'O') {
-         string name = data[1];
-         PolygonMesh mesh(Vec3d(1));
-         // OBJ File Reader
-         ifstream meshReader(scene+"/"+name);
-         string line;
-         int tcnt = 0; //tmap #
-         while(getline(meshReader, line)) {
-            int tval = -1;
-            vector<string> tkns;
-            boost::split(tkns, line, boost::is_any_of(" "), boost::token_compress_on);
-            char type = tkns[0][tkns[0].size()-1];
-            switch(type) {
-               /*case 'g': {
-                  if (tkns[2][0] == '-') {
-                     cv::Mat tmap = cv::imread(scene+"/TXT/"+tkns[1]+".jpg", CV_LOAD_IMAGE_COLOR);
-                     mesh.tmaps.push_back(tmap);
-                     tval = tcnt++;
-                  }
-                  break;
-               }*/
-               case 'v': {
-                  mesh.vert.push_back(Vec3d(stod(tkns[1]), stod(tkns[2]), stod(tkns[3])));
-                  break;
-               }
-               case 'n': {
-                  mesh.norm.push_back(Vec3d(stod(tkns[1]), stod(tkns[2]), stod(tkns[3])));
-                  break;
-               }
-               case 't': {
-                  mesh.text.push_back(pdd(stod(tkns[1]), stod(tkns[2])));
-                  break;
-               }
-               case 'f': {
-                  vector<int> data;
-                  int num;
-                  int sz = tkns.size() - 1;
-                  for (int j=1; j<=sz; j++) {
-                     vector<string> spc;
-                     boost::split(spc, tkns[j], boost::is_any_of("/"), boost::token_compress_on);
-                     for (int k=0; k<spc.size(); k++)
-                        data.push_back(stoi(spc[k]));
-                     num = spc.size();
-                  }
-                  // face, normal, texture
-                  for (int j=1; j<sz-1; j++) {
-                     Triangle tri(Vec3i(data[0]-1, data[j*num]-1, data[(j+1)*num]-1), Vec3i(-1), Vec3i(-1), tval);
-                     if (num > 2) {
-                        tri.ti = Vec3i(data[1]-1, data[j*num+1]-1, data[(j+1)*num+1]-1);
-                        tri.ni = Vec3i(data[2]-1, data[j*num+2]-1, data[(j+1)*num+2]-1);
-                     }
-                     else
-                        tri.ni = Vec3i(data[1]-1, data[j*num+1]-1, data[(j+1)*num+1]-1);
-                     mesh.tris.push_back(tri);
-                     mesh.cent.push_back((mesh.vert[tri.vi.x]+mesh.vert[tri.vi.y]+mesh.vert[tri.vi.z])/3.0);
-                  }
-                  break;
-               }
-               default: {
-                   continue;
-               }
-            }
-         }
-         obj.push_back(mesh);
+      else if (type == 'T') {
+         tarr[data[1]] = data[2];
       }
       else if (type == 'L') {
          light.push_back(Light(stod(data[8]),
@@ -98,23 +41,81 @@ void init(string scene) {
                          Vec3d(stod(data[5]), stod(data[6]), stod(data[7])),
                          data[1][0]));
       }
+      else if (type == 'O') {
+         files.push_back(data[1]);
+      }
    }
-}
-
-// NAIVE
-bool trace(const Ray &ray, pii &tind, double &tmin, pdd &uv) {
-   double t;
-   bool found = false;
-   pdd bay;
-   for (int i=0; i<obj.size(); i++)
-      for (int j=0; j<obj[i].tris.size(); j++)
-         if (obj[i].intersect(j, ray, t, bay) && t>0 && t<tmin) {
-            found = true;
-            tmin = t;
-            uv = bay;
-            tind = pii(i, j);
+   // OBJ File Reader
+   for (int i=0; i<files.size(); i++) {
+      PolygonMesh mesh(Vec3d(1));
+      ifstream meshReader(scene+"/"+files[i]);
+      string line;
+      int tcnt = 0;
+      int tval;
+      while(getline(meshReader, line)) {
+         vector<string> tkns;
+         boost::split(tkns, line, boost::is_any_of(" "), boost::token_compress_on);
+         char type = tkns[0][tkns[0].size()-1];
+         switch(type) {
+            case '%': {
+               tcnt = -9999;
+               break;
+            }
+            case 'g': {
+               tval = -1;
+               if (tarr.find(tkns[1]) != tarr.end()) {
+                  cv::Mat tmap = cv::imread(scene+"/"+tarr[tkns[1]]+".jpg", CV_LOAD_IMAGE_COLOR);
+                  mesh.tmaps.push_back(tmap);
+                  tval = tcnt++;
+               }
+               break;
+            }
+            case 'v': {
+               mesh.vert.push_back(Vec3d(stod(tkns[1]), stod(tkns[2]), stod(tkns[3])));
+               break;
+            }
+            case 'n': {
+               mesh.norm.push_back(Vec3d(stod(tkns[1]), stod(tkns[2]), stod(tkns[3])));
+               break;
+            }
+            case 't': {
+               mesh.text.push_back(pdd( max(0.0, min(0.99, stod(tkns[1]))) , max(0.0, min(0.99, stod(tkns[2]))) ));
+               break;
+            }
+            case 'f': {
+               vector<int> data;
+               int num;
+               int sz = tkns.size() - 1;
+               for (int j=1; j<=sz; j++) {
+                  vector<string> spc;
+                  boost::split(spc, tkns[j], boost::is_any_of("/"), boost::token_compress_on);
+                  for (int k=0; k<spc.size(); k++)
+                     data.push_back(stoi(spc[k]));
+                  num = spc.size();
+               }
+               // face, normal, texture
+               for (int j=1; j<sz-1; j++) {
+                  Triangle tri(Vec3i(data[0]-1, data[j*num]-1, data[(j+1)*num]-1), Vec3i(-1), Vec3i(-1), tval);
+                  if (num > 2) {
+                     tri.ti = Vec3i(data[1]-1, data[j*num+1]-1, data[(j+1)*num+1]-1);
+                     tri.ni = Vec3i(data[2]-1, data[j*num+2]-1, data[(j+1)*num+2]-1);
+                  }
+                  else
+                     tri.ni = Vec3i(data[1]-1, data[j*num+1]-1, data[(j+1)*num+1]-1);
+                  mesh.tris.push_back(tri);
+                  mesh.cent.push_back((mesh.vert[tri.vi.x]+mesh.vert[tri.vi.y]+mesh.vert[tri.vi.z])/3.0);
+               }
+               break;
+            }
+            default: {
+                continue;
+            }
          }
-   return found;
+         if (tcnt == -9999) // continue force quit
+            break;
+      }
+      obj.push_back(mesh);
+   }
 }
 
 // KDTree
@@ -169,16 +170,16 @@ void render(const Vec3d &src, const double zoom, const double angle) {
       for (int j=0; j<image.cols; j++) {
          Vec3d paint(0);
          //cout << i << ' ' << j << endl;
-         // ray-bundle tracing, GI = 9
+         // ray-bundle tracing
          double x = 0, y = 0;
-         //for (y=-0.1; y<=0.1; y+=0.1)
-            //for (x=-0.1; x<=0.1; x+=0.1) {
+         for (y=-0.1; y<=0.1; y+=0.2)
+            for (x=-0.1; x<=0.1; x+=0.2) {
                Vec3d pxl(0.5-(double)(j+x)/image.rows, 0.5-(double)(i+y)/image.rows, zoom);
                Vec3d snk = Vec3d(src.x+sin(angle)*pxl.x+cos(angle)*pxl.z,  src.y+pxl.y, src.z-cos(angle)*pxl.x+sin(angle)*pxl.z);
                Ray ray(src, unit(snk - src));
                paint = paint + castRay(ray, 0);
-            //}
-         //paint = paint/9.0;
+            }
+         paint = paint/4.0;
          cv::Vec3b& color = image.at<cv::Vec3b>(i, j);
          // OpenCV uses BGR
          color[0] = min(255, (int)(255.0*paint.z));
@@ -205,7 +206,7 @@ int main() {
       chrono::duration<double> elapsed = finish - start;
       cout << "Elapsed time: " << elapsed.count() << " s\n";
       cv::imshow("Scene", image);
-      //cv::imwrite("Images/"+name+".bmp", image);
+      cv::imwrite("Images/"+name+".jpg", image);
       c = cv::waitKey(0);
       // Movement
       switch(c) {

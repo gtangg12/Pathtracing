@@ -1,134 +1,133 @@
-# type, file, RBG values
-C 50 150 0 40 5 135 0.5
+# x, y, z, step, astep, angle
+C 125 130 -75 50 45 130 1.0
 O bedroom.txt
 # type, light, pos, RGB values
-L d 1 1 0 1 1 1 10
-L p 0 165 -2.5 1 1 1 1750000
-
-#door_frame
-#door-
-#plagat1
-#plagat2
-#pillow
-#sheet
-#bed_nohy
-#bed
-#deka
-#bedframe
-#plagat3
-#floor1
-#table
-#window2
-#monitor_knob
-#monitor_body-
-#cl_bulb-
-#cl_metal-
-#cl_shade-
-#polySurface10523-
-#polySurface10524-
-#polySurface10525-
-#window1
-#polySurface34-
-#polySurface81-
-#polySurface82-
-#polySurface83-
-#polySurface84-
-#cinka
-#keyboard_buttons
-#monitor_strepy
-#polySurface10528
-#polySurface10529-
-#polySurface10530-
-#polySurface10531-
-#polySurface10532-
-#polySurface10533
-#polySurface10534-
-#polySurface10535-
-#polySurface10536-
-#polySurface10537-
-#box1
-#zmuchlanypapir5
-#zmuchlanypapir6
-#zmuchlanypapir7
-#kos
-#book1
-#polySurface8942-
-#polySurface8943-
-#polySurface10929
-#polySurface10928_REBUILT
-#keyboard
-#polySurface10930
-#polySurface10927_REBUILT
-#polySurface32-
-#polySurface33-
-#polySurface27-
-#listi
-#polySurface5-
-#polySurface8944-
-#chair_seatcushion-
-#polySurface8945-
-#polySurface8998-
-#chair
-#dresser2_table
-#dresser2_top
-#polySurface10913
-#polySurface10912
-#dresser1_bot
-#dresser1_mid
-#dresser1_top
-#dresser1_table
-#cabinet_wall
-#plant_leaves-
-#plant_stems-
-#soda_bottle-
-#soda_cap-
-#soda_label
-#soda_base-
-#amp_body-
-#amp_plastic
-#amp_cloth-
-#cabinets-
-#drink_straw
-#drink_lid
-#drink_cup
-#monitor_base
-#plagat4
-#extrudedSurface1
-#extrudedSurface2
-#polySurface8
-#polySurface9360-
-#mouse_base-
-#polySurface10895-
-#backwall
-#walls
-#amp_knobs-
-#guitar
-#guitar_notes-
-#guitar_plisky-
-#guitar_buttons-
-#guitar_cover
-#guitar_metal-
-#keyboard-
-#mouse_button
-#laptop-
-#lamp_bulb
-#lamp_shade
-#lamp_socket
-#chair
-#lamp_base
-#pc-
-#musmatta
-#mus_sladd
-#mouse
-#keyboard_keys-
-#keyboard1-
-#amp_details-
-#knobs-
-#dresser_surfaces-
-#polySurface10931-
-#cl_fillament-
-#cl_fixture-
-#polySurface10932-
-#polySurface10933-
-#door_hardware-
-#monitor_screen
+# L d 1 1 0 1 1 1 1000
+L p 0 150 100 1 1 1 5000
+T door_frame wall
+#T door -
+T plagat1 lightbluepaper
+T plagat2 canvas
+T pillow cloth
+T sheet cloth
+T bed_nohy wood
+T bed wood
+T deka redcloth
+T bedframe pearlwhite
+T plagat3 goldrough
+T floor1 wood
+T table wood
+T window2 pearlwhite
+T monitor_knob pearlwhite
+#T monitor_body -
+#T cl_bulb -
+#T cl_metal -
+#T cl_shade -
+#T polySurface10523 -
+#T polySurface10524 -
+#T polySurface10525 -
+T window1 pearlwhite
+#T polySurface34 -
+#T polySurface81 -
+#T polySurface82 -
+#T polySurface83 -
+#T polySurface84 -
+T cinka blackmetal
+T keyboard_buttons pearlwhite
+T monitor_strepy pearlwhite
+T polySurface10528 pearlwhite
+#T polySurface10529 -
+#T polySurface10530 -
+#T polySurface10531 -
+#T polySurface10532 -
+T polySurface10533 pearlwhite
+#T polySurface10534 -
+#T polySurface10535 -
+#T polySurface10536 -
+#T polySurface10537 -
+T box1 darkwood
+T zmuchlanypapir5 canvas
+T zmuchlanypapir6 canvas
+T zmuchlanypapir7 canvas
+T kos greenplastic
+T book1 redpaper
+#T polySurface8942 -
+#T polySurface8943 -
+T polySurface10929 pearlwhite
+T polySurface10928_REBUILT pearlwhite
+T keyboard pearlwhite
+T polySurface10930 pearlwhite
+T polySurface10927_REBUILT pearlwhite
+#T polySurface32 -
+#T polySurface33 -
+#T polySurface27 -
+T listi pearlwhite
+#T polySurface5 -
+#T polySurface8944 -
+#T chair_seatcushion -
+#T polySurface8945 -
+#T polySurface8998 -
+T chair pearlwhite
+T dresser2_table redwood
+T dresser2_top redwood
+T polySurface10913 redwood
+T polySurface10912 redwood
+T dresser1_bot redwood
+T dresser1_mid redwood
+T dresser1_top redwood
+T dresser1_table redwood
+T cabinet_wall redwood
+T plant_leaves leafgreen -
+T plant_stems leafgreen -
+T soda_bottle greenplastic -
+T soda_cap greenplastic -
+T soda_label darkgreen
+T soda_base greenplastic -
+T amp_body wood -
+T amp_plastic pearlwhite
+T amp_cloth bluecloth -
+T cabinets redwood -
+T drink_straw redpaper
+T drink_lid canvas
+T drink_cup canvas
+T monitor_base pearlwhite
+T plagat4 abstract
+T extrudedSurface1 pearlwhite
+T extrudedSurface2 pearlwhite
+T polySurface8 pearlwhite
+T polySurface9360 redwood -
+#T mouse_base -
+T polySurface10895 redwood -
+T backwall pearlwhite
+T walls pearlwhite
+T amp_knobs goldrough -
+T guitar lightwood
+#T guitar_notes -
+#T guitar_plisky -
+#T guitar_buttons -
+T guitar_cover lightwood
+#T guitar_metal -
+#T keyboard -
+T mouse_button pearlwhite
+T laptop silvertin -
+T lamp_bulb glass
+T lamp_shade darkred
+T lamp_socket blackmetal
+T chair pearlwhite
+T lamp_base darkred
+#T pc -
+T musmatta blackcloth
+T mus_sladd pearlwhite
+T mouse pearlwhite
+#T keyboard_keys -
+#T keyboard1 -
+#T amp_details -
+#T knobs -
+#T dresser_surfaces -
+#T polySurface10931 -
+#T cl_fillament -
+#T cl_fixture -
+#T polySurface10932 -
+#T polySurface10933 -
+#T door_hardware -
+T monitor_screen glass

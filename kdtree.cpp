@@ -100,6 +100,7 @@ public:
          if (l) left->ind.push_back(ind[i]);
          if (r) right->ind.push_back(ind[i]);
       }
+
       // if centers are the same
       if (max(left->ind.size(), right->ind.size()) == ind.size()) {
          sum += ind.size();
@@ -108,6 +109,7 @@ public:
          free(right);
          return;
       }
+
       left->build(depth+1);
       right->build(depth+1);
    }

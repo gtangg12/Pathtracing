@@ -68,8 +68,14 @@ public:
       for (int i=0; i<3; i++) {
          cv::Mat &tref = tmaps[tris[ind].tm];
          // must be square
-         cv::Vec3b temp = tref.at<cv::Vec3b>(cv::Point((int)(text[T[i]].first*tref.rows),
-                                                       (int)(text[T[i]].second*tref.rows)));
+         int r = 0, c = 0;
+         //cout << "HI" << endl;
+         if (T[i] != -1) {
+            r = (int)(text[T[i]].first*tref.rows);
+            c = (int)(text[T[i]].second*tref.rows);
+         }
+         cv::Vec3b temp = tref.at<cv::Vec3b>(cv::Point(r, c));
+         //cout << "BYE" << endl;
          color[i] = Vec3d(temp[2], temp[1], temp[0]); // BGR
       }
       txt = (w*color[0] + uv.first*color[1] + uv.second*color[2])/256.0;

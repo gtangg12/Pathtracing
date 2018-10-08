@@ -15,7 +15,7 @@ public:
          ldir = pos - hit;
          dis = len(ldir);
          ldir = unit(ldir);
-         shade = mag*color/(4*dis*dis*M_PI);
+         shade = mag*color/(4*dis*M_PI); // linear
       }
    }
 };
