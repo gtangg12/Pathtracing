@@ -2,7 +2,7 @@
 #include "polygonMesh.cpp"
 #include "lighting.cpp"
 
-cv::Mat image(1024, 1024, CV_8UC3, cv::Scalar(210, 160, 30));
+cv::Mat image(500, 500, CV_8UC3, cv::Scalar(210, 160, 30));
 //Vec3d background(0.118, 0.627, 0.824);
 Vec3d background(1);
 vector<PolygonMesh> obj;
@@ -58,15 +58,18 @@ void init(string scene) {
          char type = tkns[0][tkns[0].size()-1];
          switch(type) {
             case '%': {
-               tcnt = -9999;
+               tcnt = -99999;
                break;
             }
             case 'g': {
-               tval = -1;
+               tval = -99999;
                if (tarr.find(tkns[1]) != tarr.end()) {
                   cv::Mat tmap = cv::imread(scene+"/"+tarr[tkns[1]]+".jpg", CV_LOAD_IMAGE_COLOR);
                   mesh.tmaps.push_back(tmap);
                   tval = tcnt++;
+                  // interpolate by point
+                  if (tkns[2][0] == '?')
+                     tval=-tval-1;
                }
                break;
             }
@@ -111,7 +114,7 @@ void init(string scene) {
                 continue;
             }
          }
-         if (tcnt == -9999) // continue force quit
+         if (tcnt == -99999) // continue force quit
             break;
       }
       obj.push_back(mesh);
@@ -123,19 +126,26 @@ void init(string scene) {
 KDNode* tree = new KDNode();
 int MAX_DEPTH = 1;
 
-Vec3d castRay(const Ray &ray, const int depth) {
+// Maps: diffuse, albedo*txt, normal, hit
+Vec3d mpnt[1024][1024];
+Vec3d mclr[1024][1024];
+Vec3d mnrm[1024][1024];
+Vec3d mhit[1024][1024];
+
+Vec3d castRay(const Ray &ray, const int depth, const int r, const int c) {
    pii tind; pdd uv;
    double tmin = FLT_MAX;
    if (!tree->search(ray, tind, tmin, uv)) {
-   //if (!trace(ray, tind, tmin, uv)) {
-      if (depth == 0)
+      if (depth == 0) {
+         mhit[r][c] = Vec3d(-99999);
          return background;
-      return Vec3d(0.5);
+      }
+      return Vec3d(0);
    }
    Vec3d hit, nrm, txt;
    obj[tind.first].surfaceProperties(tind.second, ray, uv, nrm, txt);
    hit = ray.src + tmin*ray.dir + 0.0001*nrm;
-   Vec3d direct = Vec3d(), indirect = Vec3d();
+   Vec3d direct = Vec3d();
    // Direct Lighting
    pii temp;
    for (int k=0; k<light.size(); k++) {
@@ -146,51 +156,76 @@ Vec3d castRay(const Ray &ray, const int depth) {
       bool vis = !tree->search(lray, temp, dis, uv);
       direct = direct + vis*max(0.0, dot(ldir, nrm))*shade;
    }
-   /*
-   // Global Illumination
+   // primary ray
    if (depth == 0) {
-      Vec3d Nt, Nb;
-      createCoordSystem(nrm, Nt, Nb);
-      for (int i=0; i<Nsamples; i++) {
-         double r1, r2;
-         Vec3d sample = uniformSampleHemisphere(r1, r2);
-         Vec3d world(sample.x * Nb.x + sample.y * nrm.x + sample.z * Nt.x,
-                     sample.x * Nb.y + sample.y * nrm.y + sample.z * Nt.y,
-                     sample.x * Nb.z + sample.y * nrm.z + sample.z * Nt.z);
-         Ray iray(hit, world);
-         indirect = indirect + r1*castRay(iray, depth+1);
-      }
-   }*/
-   return txt*obj[tind.first].albedo*(direct/M_PI + 2.0*indirect/(double)Nsamples);
+      mclr[r][c] = txt*obj[tind.first].albedo;
+      mhit[r][c] = hit;
+      mnrm[r][c] = nrm;
+   }
+   return txt*obj[tind.first].albedo*direct/M_PI;
+}
+
+// Global Illumination
+Vec3d globalIllumination(const int N, const int r, const int c) {
+   Vec3d Nt, Nb;
+   Vec3d indirect = Vec3d(0), nrm = mnrm[r][c], hit = mhit[r][c];
+   if (hit.x == -99999 || N == 0)
+      return Vec3d(0);
+   createCoordSystem(nrm, Nt, Nb);
+   for (int i=0; i<N; i++) {
+      double r1, r2;
+      Vec3d sample = uniformSampleHemisphere(r1, r2);
+      Vec3d world(sample.x * Nb.x + sample.y * nrm.x + sample.z * Nt.x,
+                  sample.x * Nb.y + sample.y * nrm.y + sample.z * Nt.y,
+                  sample.x * Nb.z + sample.y * nrm.z + sample.z * Nt.z);
+      Ray iray(hit, world);
+      indirect = indirect + r1*castRay(iray, -1, -1, -1);
+   }
+   return 2.0*mclr[r][c]*indirect/((double)N);
 }
 
 void render(const Vec3d &src, const double zoom, const double angle) {
+   //#pragma omp parallel for
    for (int i=0; i<image.rows; i++) {
-      //#pragma omp parallel for
       for (int j=0; j<image.cols; j++) {
          Vec3d paint(0);
-         //cout << i << ' ' << j << endl;
          // ray-bundle tracing
          double x = 0, y = 0;
-         for (y=-0.1; y<=0.1; y+=0.2)
-            for (x=-0.1; x<=0.1; x+=0.2) {
+         //for (y=-0.1; y<=0.1; y+=0.2)
+            //for (x=-0.1; x<=0.1; x+=0.2) {
                Vec3d pxl(0.5-(double)(j+x)/image.rows, 0.5-(double)(i+y)/image.rows, zoom);
                Vec3d snk = Vec3d(src.x+sin(angle)*pxl.x+cos(angle)*pxl.z,  src.y+pxl.y, src.z-cos(angle)*pxl.x+sin(angle)*pxl.z);
                Ray ray(src, unit(snk - src));
-               paint = paint + castRay(ray, 0);
-            }
-         paint = paint/4.0;
+               paint = paint + castRay(ray, 0, i, j);
+            //}
+         //paint = paint/4.0;
+         mpnt[i][j] = paint;
+      }
+   }
+   cout << "Indirect Lighting" << endl;
+   // Global Illumination
+   int Nsamples = 8;
+   //#pragma omp parallel for
+   for (int i=0; i<image.rows; i++) {
+      for (int j=0; j<image.cols; j++) {
+         mpnt[i][j] = mpnt[i][j] + globalIllumination(Nsamples, i, j);
+      }
+   }
+   // Set Color
+   //#pragma omp parallel for
+   for (int i=0; i<image.rows; i++) {
+      for (int j=0; j<image.cols; j++) {
          cv::Vec3b& color = image.at<cv::Vec3b>(i, j);
          // OpenCV uses BGR
-         color[0] = min(255, (int)(255.0*paint.z));
-         color[1] = min(255, (int)(255.0*paint.y));
-         color[2] = min(255, (int)(255.0*paint.x));
+         color[0] = min(255, (int)(255.0*mpnt[i][j].z));
+         color[1] = min(255, (int)(255.0*mpnt[i][j].y));
+         color[2] = min(255, (int)(255.0*mpnt[i][j].x));
       }
    }
 }
 
 int main() {
-   string name = "room";
+   string name = "car";
    init(name);
    buildTree(tree);
    int c = 0, sumT = 0;
@@ -198,15 +233,15 @@ int main() {
       sumT+=obj[i].tris.size();
    cout << "Triangles: " << sumT << endl;
    while(true) {
-      //println(eye);
-      //cout << angle << endl;
+      println(eye);
+      cout << angle << endl;
       auto start = std::chrono::high_resolution_clock::now();
       render(eye, zoom, angle);
       auto finish = std::chrono::high_resolution_clock::now();
       chrono::duration<double> elapsed = finish - start;
       cout << "Elapsed time: " << elapsed.count() << " s\n";
       cv::imshow("Scene", image);
-      cv::imwrite("Images/"+name+".jpg", image);
+      //cv::imwrite("Images/"+name+".jpg", image);
       c = cv::waitKey(0);
       // Movement
       switch(c) {

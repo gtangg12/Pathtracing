@@ -21,7 +21,6 @@ public:
 };
 
 // Global Illumination
-int Nsamples = 1;
 double pdf = 1/(2*M_PI);
 
 void createCoordSystem(const Vec3d &N, Vec3d &Nt, Vec3d &Nb) {

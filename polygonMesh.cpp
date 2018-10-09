@@ -58,26 +58,35 @@ public:
       double w = 1.0-uv.first-uv.second;
       nrm = unit(w*norm[N.x] + uv.first*norm[N.y] + uv.second*norm[N.z]);
       // No texture option
-      if (tris[ind].tm == -1) {
+      int mn = tris[ind].tm;
+      if (mn == -99999) {
          txt = Vec3d(1);
          return;
       }
-      // Texture
+      // Texture, tmap must be square
       Vec3i T = tris[ind].ti;
-      Vec3d color[3];
-      for (int i=0; i<3; i++) {
-         cv::Mat &tref = tmaps[tris[ind].tm];
-         // must be square
-         int r = 0, c = 0;
-         //cout << "HI" << endl;
-         if (T[i] != -1) {
-            r = (int)(text[T[i]].first*tref.rows);
-            c = (int)(text[T[i]].second*tref.rows);
-         }
+      // Interpolate by Coordinate
+      if (mn < 0) {
+         mn = -(mn+1);
+         cv::Mat &tref = tmaps[mn];
+         int r = (text[T[0]].first*w + text[T[1]].first*uv.first + text[T[2]].first*uv.second)*tref.rows;
+         int c = (text[T[0]].second*w + text[T[1]].second*uv.first + text[T[2]].second*uv.second)*tref.rows;
          cv::Vec3b temp = tref.at<cv::Vec3b>(cv::Point(r, c));
-         //cout << "BYE" << endl;
-         color[i] = Vec3d(temp[2], temp[1], temp[0]); // BGR
+         txt = Vec3d(temp[2], temp[1], temp[0])/256.0;
       }
-      txt = (w*color[0] + uv.first*color[1] + uv.second*color[2])/256.0;
+      else { // Interpolate by Color
+         Vec3d color[3];
+         cv::Mat &tref = tmaps[mn];
+         for (int i=0; i<3; i++) {
+            int r = 0, c = 0;
+            if (T[i] != -1) {
+               r = (int)(text[T[i]].first*tref.rows);
+               c = (int)(text[T[i]].second*tref.rows);
+            }
+            cv::Vec3b temp = tref.at<cv::Vec3b>(cv::Point(r, c));
+            color[i] = Vec3d(temp[2], temp[1], temp[0]); // BGR
+         }
+         txt = (w*color[0] + uv.first*color[1] + uv.second*color[2])/256.0;
+      }
    }
 };
