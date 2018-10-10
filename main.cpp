@@ -2,7 +2,7 @@
 #include "polygonMesh.cpp"
 #include "lighting.cpp"
 
-cv::Mat image(500, 500, CV_8UC3, cv::Scalar(210, 160, 30));
+cv::Mat image(512, 512, CV_8UC3, cv::Scalar(210, 160, 30));
 //Vec3d background(0.118, 0.627, 0.824);
 Vec3d background(1);
 vector<PolygonMesh> obj;
@@ -191,20 +191,19 @@ void render(const Vec3d &src, const double zoom, const double angle) {
          Vec3d paint(0);
          // ray-bundle tracing
          double x = 0, y = 0;
-         //for (y=-0.1; y<=0.1; y+=0.2)
-            //for (x=-0.1; x<=0.1; x+=0.2) {
+         for (y=-0.1; y<=0.1; y+=0.2)
+            for (x=-0.1; x<=0.1; x+=0.2) {
                Vec3d pxl(0.5-(double)(j+x)/image.rows, 0.5-(double)(i+y)/image.rows, zoom);
                Vec3d snk = Vec3d(src.x+sin(angle)*pxl.x+cos(angle)*pxl.z,  src.y+pxl.y, src.z-cos(angle)*pxl.x+sin(angle)*pxl.z);
                Ray ray(src, unit(snk - src));
                paint = paint + castRay(ray, 0, i, j);
-            //}
-         //paint = paint/4.0;
+            }
+         paint = paint/4.0;
          mpnt[i][j] = paint;
       }
    }
-   cout << "Indirect Lighting" << endl;
    // Global Illumination
-   int Nsamples = 8;
+   int Nsamples = 4;
    //#pragma omp parallel for
    for (int i=0; i<image.rows; i++) {
       for (int j=0; j<image.cols; j++) {
@@ -232,6 +231,32 @@ int main() {
    for (int i=0; i<obj.size(); i++)
       sumT+=obj[i].tris.size();
    cout << "Triangles: " << sumT << endl;
+
+   ifstream fin("path.txt");
+   int N;
+   fin >> N;
+   int cnt = 0;
+   string line;
+   for (int i=0; i<N; i++) {
+      double a, b, c;
+      fin >> a >> b >> c;
+      vector<string> tkns;
+      boost::split(tkns, line, boost::is_any_of(" "), boost::token_compress_on);
+      eye = Vec3d(a, b, c);
+      double angles[12] = {0, 30, 60, 90, 120, 150, 180, 210, 240, 270, 300, 330};
+      for (int j=0; j<12; j++) {
+         angle = 0.01745329251*angles[j];
+         //for (int k=0; k<4; k++) {
+            cout << cnt << endl;
+            println(eye);
+            cout << angle << endl;
+            render(eye, zoom, angle);
+            cv::imwrite("CARDATA/"+name+to_string(cnt)+".jpg", image);
+            cnt++;
+         //}
+      }
+   }
+   /*
    while(true) {
       println(eye);
       cout << angle << endl;
@@ -270,5 +295,5 @@ int main() {
             break;
          }
       }
-   }
+   }*/
 }
