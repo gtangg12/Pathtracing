@@ -68,7 +68,7 @@ void init(string scene) {
                   mesh.tmaps.push_back(tmap);
                   tval = tcnt++;
                   // interpolate by point
-                  if (tkns[2][0] == '?')
+                  if (tkns.size()>2 && tkns[2][0] == '?')
                      tval=-tval-1;
                }
                break;
@@ -203,7 +203,7 @@ void render(const Vec3d &src, const double zoom, const double angle) {
       }
    }
    // Global Illumination
-   int Nsamples = 4;
+   int Nsamples = 1024;
    //#pragma omp parallel for
    for (int i=0; i<image.rows; i++) {
       for (int j=0; j<image.cols; j++) {
@@ -237,21 +237,22 @@ int main() {
    fin >> N;
    int cnt = 0;
    string line;
+   double angles[16] = {0, 10, 20, 30, 45, 60, 75, 90, 180, -90, -75, -60, -45, -30, -20, -10};
    for (int i=0; i<N; i++) {
       double a, b, c;
       fin >> a >> b >> c;
       vector<string> tkns;
       boost::split(tkns, line, boost::is_any_of(" "), boost::token_compress_on);
       eye = Vec3d(a, b, c);
-      double angles[12] = {0, 30, 60, 90, 120, 150, 180, 210, 240, 270, 300, 330};
-      for (int j=0; j<12; j++) {
-         angle = 0.01745329251*angles[j];
+      for (int j=0; j<16; j++) {
+         double angle = -acos(-unit(Vec3d(a, 0, c)).x);
+         angle += 0.01745329251*angles[j];
          //for (int k=0; k<4; k++) {
             cout << cnt << endl;
             println(eye);
             cout << angle << endl;
             render(eye, zoom, angle);
-            cv::imwrite("CARDATA/"+name+to_string(cnt)+".jpg", image);
+            cv::imwrite("CARDATA2/"+name+to_string(cnt)+".jpg", image);
             cnt++;
          //}
       }
@@ -266,7 +267,7 @@ int main() {
       chrono::duration<double> elapsed = finish - start;
       cout << "Elapsed time: " << elapsed.count() << " s\n";
       cv::imshow("Scene", image);
-      //cv::imwrite("Images/"+name+".jpg", image);
+      cv::imwrite("Images/"+name+".jpg", image);
       c = cv::waitKey(0);
       // Movement
       switch(c) {
