@@ -1,5 +1,6 @@
 // C
 #include <stdlib.h>
+#include <stdio.h>
 #include <cfloat>
 #include <cmath>
 #include <cstdlib>

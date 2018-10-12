@@ -86,6 +86,7 @@ main: /usr/local/lib/libopencv_shape.3.4.2.dylib
 main: /usr/local/lib/libopencv_stitching.3.4.2.dylib
 main: /usr/local/lib/libopencv_superres.3.4.2.dylib
 main: /usr/local/lib/libopencv_videostab.3.4.2.dylib
+main: /usr/local/Cellar/open-mpi/3.1.2/lib/libmpi.dylib
 main: /usr/local/lib/libopencv_calib3d.3.4.2.dylib
 main: /usr/local/lib/libopencv_features2d.3.4.2.dylib
 main: /usr/local/lib/libopencv_flann.3.4.2.dylib
