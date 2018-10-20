@@ -19,8 +19,6 @@ lighting.cpp
 /Users/mmreed/Documents/CS/STS/Raytrace/lighting.cpp
 kdtree.cpp
 /Users/mmreed/Documents/CS/STS/Raytrace/kdtree.cpp
-mpi.h
--
 
 /Users/mmreed/Documents/CS/STS/Raytrace/polygonMesh.cpp
 
@@ -5717,20 +5715,6 @@ boost/utility/detail/result_of_iterate.hpp
 -
 
 /usr/local/include/boost/version.hpp
-
-/usr/local/include/mpi.h
-stddef.h
--
-mpi_portable_platform.h
-/usr/local/include/mpi_portable_platform.h
-openmpi/ompi/mpi/cxx/mpicxx.h
-/usr/local/include/openmpi/ompi/mpi/cxx/mpicxx.h
-
-/usr/local/include/mpi_portable_platform.h
-omp.h
-/usr/local/include/omp.h
-omp.h
-/usr/local/include/omp.h
 
 /usr/local/include/opencv/cxcore.h
 opencv2/core/core_c.h

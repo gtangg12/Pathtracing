@@ -126,12 +126,18 @@ void init(string scene) {
 KDNode* tree = new KDNode();
 int MAX_DEPTH = 1;
 
-Vec3d castRay(const Ray &ray, const int depth, Vec3d &mclr, Vec3d &mnrm, Vec3d &mhit) {
+// Maps: diffuse, albedo*txt, normal, hit
+Vec3d mpnt[1024][1024];
+Vec3d mclr[1024][1024];
+Vec3d mnrm[1024][1024];
+Vec3d mhit[1024][1024];
+
+Vec3d castRay(const Ray &ray, const int depth, const int r, const int c) {
    pii tind; pdd uv;
    double tmin = FLT_MAX;
    if (!tree->search(ray, tind, tmin, uv)) {
       if (depth == 0) {
-         mhit = Vec3d(-99999);
+         mhit[r][c] = Vec3d(-99999);
          return background;
       }
       return Vec3d(0);
@@ -150,20 +156,19 @@ Vec3d castRay(const Ray &ray, const int depth, Vec3d &mclr, Vec3d &mnrm, Vec3d &
       bool vis = !tree->search(lray, temp, dis, uv);
       direct = direct + vis*max(0.0, dot(ldir, nrm))*shade;
    }
-   // GI Primary
+   // primary ray
    if (depth == 0) {
-      mclr = txt*obj[tind.first].albedo;
-      mnrm = nrm;
-      mhit = hit;
+      mclr[r][c] = txt*obj[tind.first].albedo;
+      mhit[r][c] = hit;
+      mnrm[r][c] = nrm;
    }
    return txt*obj[tind.first].albedo*direct/M_PI;
 }
 
-Vec3d temp;
 // Global Illumination
-Vec3d globalIllumination(const int N, Vec3d &nrm, Vec3d &hit) {
+Vec3d globalIllumination(const int N, const int r, const int c) {
    Vec3d Nt, Nb;
-   Vec3d indirect = Vec3d(0);
+   Vec3d indirect = Vec3d(0), nrm = mnrm[r][c], hit = mhit[r][c];
    if (hit.x == -99999 || N == 0)
       return Vec3d(0);
    createCoordSystem(nrm, Nt, Nb);
@@ -174,135 +179,122 @@ Vec3d globalIllumination(const int N, Vec3d &nrm, Vec3d &hit) {
                   sample.x * Nb.y + sample.y * nrm.y + sample.z * Nt.y,
                   sample.x * Nb.z + sample.y * nrm.z + sample.z * Nt.z);
       Ray iray(hit, world);
-      indirect = indirect + r1*castRay(iray, -1, temp, temp, temp);
+      indirect = indirect + r1*castRay(iray, -1, -1, -1);
    }
    return indirect;
 }
 
-Vec3d render(const Vec3d &src, const double zoom, const double angle, int i, int j) {
-   Vec3d paint(0);
-   // ray-bundle tracing
-   double x = 0, y = 0;
-   Vec3d mclr, mnrm, mhit;
-   for (y=-0.1; y<=0.1; y+=0.1)
-      for (x=-0.1; x<=0.1; x+=0.1) {
-         if ((x == 0) ^ (y == 0))
-            continue;
-         Vec3d pxl(0.5-(double)(j+x)/image.rows, 0.5-(double)(i+y)/image.rows, zoom);
-         Vec3d snk = Vec3d(src.x+sin(angle)*pxl.x+cos(angle)*pxl.z, src.y+pxl.y, src.z-cos(angle)*pxl.x+sin(angle)*pxl.z);
-         Ray ray(src, unit(snk - src));
-         if (x == 0  && y == 0)
-            castRay(ray, 0, mclr, mnrm, mhit);
-         else
-            paint = paint + castRay(ray, 0, temp, temp, temp);
+void render(const Vec3d &src, const double zoom, const double angle) {
+   //#pragma omp parallel for
+   for (int i=0; i<image.rows; i++) {
+      for (int j=0; j<image.cols; j++) {
+         Vec3d paint(0);
+         // ray-bundle tracing
+         double x = 0, y = 0;
+         for (y=-0.1; y<=0.1; y+=0.2)
+            for (x=-0.1; x<=0.1; x+=0.2) {
+               Vec3d pxl(0.5-(double)(j+x)/image.rows, 0.5-(double)(i+y)/image.rows, zoom);
+               Vec3d snk = Vec3d(src.x+sin(angle)*pxl.x+cos(angle)*pxl.z,  src.y+pxl.y, src.z-cos(angle)*pxl.x+sin(angle)*pxl.z);
+               Ray ray(src, unit(snk - src));
+               paint = paint + castRay(ray, 0, i, j);
+            }
+         paint = paint/4.0;
+         mpnt[i][j] = paint;
       }
-   Vec3d direct = paint/4.0;
+   }
    // Global Illumination
-   int Nsamples = 4;
-   paint = direct+2.0*mclr*globalIllumination(Nsamples, mnrm, mhit)/((double)Nsamples);
-   return paint;
+   int Nsamples = 0;
+   //#pragma omp parallel for
+   for (int i=0; i<image.rows; i++) {
+      for (int j=0; j<image.cols; j++) {
+         mpnt[i][j] = mpnt[i][j] + 2.0*mclr[i][j]*globalIllumination(Nsamples, i, j)/((double)Nsamples);
+      }
+   }
+   // Set Color
+   //#pragma omp parallel for
+   for (int i=0; i<image.rows; i++) {
+      for (int j=0; j<image.cols; j++) {
+         cv::Vec3b& color = image.at<cv::Vec3b>(i, j);
+         // OpenCV uses BGR
+         Vec3d nrm = mnrm[i][j];
+         nrm = (nrm+Vec3d(1.0))/2.0;
+         color[0] = min(255, (int)(255.0*nrm.z));
+         color[1] = min(255, (int)(255.0*nrm.y));
+         color[2] = min(255, (int)(255.0*nrm.x));
+      }
+   }
 }
 
-// Parallel
-#include <mpi.h>
-
-int main(int argc, char** argv) {
+int main() {
    string name = "car";
    init(name);
    buildTree(tree);
    int c = 0, sumT = 0;
    for (int i=0; i<obj.size(); i++)
       sumT+=obj[i].tris.size();
+   cout << "Triangles: " << sumT << endl;
 
-   MPI_Init(NULL, NULL);
-   int world_size, world_rank;
-   MPI_Comm_size(MPI_COMM_WORLD, &world_size);
-   MPI_Comm_rank(MPI_COMM_WORLD, &world_rank);
-
-   cout << "Process "+to_string(world_rank)+" read triangles: " << sumT << endl;
-
-   double red[512];
-   double green[512];
-   double blue[512];
-   int process[513]; // 1 extra for size
-   int camera[4];
-   int slaves = 1;
-
-   if (world_rank == 0) {
-      ifstream fin("path.txt");
-      int N;
-      fin >> N;
-      int cnt = 0;
-      string line;
-      double angles[16] = {0, 10, 20, 30, 45, 60, 75, 90, 180, -90, -75, -60, -45, -30, -20, -10};
-      for (int i=0; i<N; i++) {
-         double a, b, c;
-         fin >> a >> b >> c;
-         vector<string> tkns;
-         boost::split(tkns, line, boost::is_any_of(" "), boost::token_compress_on);
-         for (int j=0; j<16; j++) {
-            // arr for process allocation
-            vector<int> parr[512];
-            angle = -acos(-unit(Vec3d(a, 0, c)).x);
-            angle += 0.01745329251*angles[j];
-            camera[0] = a; camera[1] = b; camera[2] = c; camera[3] = angle;
-            int pc = 0;
-            // allocate work by rows
-            for (int I=0; I<image.rows; I++) {
-               parr[pc++].push_back(I);
-               pc%=slaves;
-            }
-            // send work
-            for (int i=0; i<slaves; i++) {
-               int total = parr[i].size();
-               // first one denotes size
-               process[0] = total;
-               for (int j=1; j<=total; j++)
-                  process[j] = parr[i][j-1]; // j starts at 1 but parr vector starts at 0
-               MPI_Send(&camera, 4, MPI_DOUBLE, i+1, 0, MPI_COMM_WORLD);
-               MPI_Send(&process, 513, MPI_INT, i+1, 0, MPI_COMM_WORLD);
-            }
-            // recieve work
-            for (int i=0; i<slaves; i++) {
-               for (int j=0; j<parr[i].size(); j++) { // update row buffers according to parr (processes)
-                  MPI_Recv(&red, 512, MPI_DOUBLE, i+1, 0, MPI_COMM_WORLD, MPI_STATUS_IGNORE);
-                  MPI_Recv(&blue, 512, MPI_DOUBLE, i+1, 0, MPI_COMM_WORLD, MPI_STATUS_IGNORE);
-                  MPI_Recv(&green, 512, MPI_DOUBLE, i+1, 0, MPI_COMM_WORLD, MPI_STATUS_IGNORE);
-                  for (int k=0; k<image.cols; k++) {
-                     cv::Vec3b& color = image.at<cv::Vec3b>(parr[i][j], k);
-                     // OpenCV uses BGR
-                     color[0] = min(255, (int)(255.0*blue[k]));
-                     color[1] = min(255, (int)(255.0*green[k]));
-                     color[2] = min(255, (int)(255.0*red[k]));
-                  }
-               }
-            }
-            cv::imshow("Test", image);
-            cv::waitKey(0);
-            //cv::imwrite("CARDATA2/"+name+to_string(cnt)+".jpg", image);
-            cnt++;
-         }
+   ifstream fin("path.txt");
+   int N;
+   fin >> N;
+   int cnt = 0;
+   string line;
+   double angles[16] = {0, 10, 20, 30, 45, 60, 75, 90, 180, -90, -75, -60, -45, -30, -20, -10};
+   for (int i=0; i<N; i++) {
+      double a, b, c;
+      fin >> a >> b >> c;
+      vector<string> tkns;
+      boost::split(tkns, line, boost::is_any_of(" "), boost::token_compress_on);
+      eye = Vec3d(a, b, c);
+      for (int j=0; j<16; j++) {
+         double angle = -acos(-unit(Vec3d(a, 0, c)).x);
+         angle += 0.01745329251*angles[j];
+         render(eye, zoom, angle);
+         //cv::imshow("Test", image);
+         //cv::waitKey(0);
+         cv::imwrite("CARDATANRM/"+name+to_string(cnt)+".jpg", image);
+         cnt++;
+         cout << cnt << endl;
       }
    }
-   else {
-      MPI_Recv(&camera, 4, MPI_DOUBLE, 0, 0, MPI_COMM_WORLD, MPI_STATUS_IGNORE);
-      MPI_Recv(&process, 513, MPI_INT, 0, 0, MPI_COMM_WORLD, MPI_STATUS_IGNORE);
-      Vec3d eye = Vec3d(camera[0], camera[1], camera[2]);
-      angle = camera[3];
-      for (int i=0; i<process[0]; i++) {
-         int row = process[i+1];
-         for (int j=0; j<image.cols; j++) {
-            //cout << row << ' ' << j << endl;
-            Vec3d paint = render(eye, zoom, angle, row, j);
-            red[j] = paint.x;
-            blue[j] = paint.y;
-            green[j] = paint.z;
+   /*
+   while(true) {
+      println(eye);
+      cout << angle << endl;
+      auto start = std::chrono::high_resolution_clock::now();
+      render(eye, zoom, angle);
+      auto finish = std::chrono::high_resolution_clock::now();
+      chrono::duration<double> elapsed = finish - start;
+      cout << "Elapsed time: " << elapsed.count() << " s\n";
+      cv::imshow("Scene", image);
+      cv::imwrite("Images/"+name+".jpg", image);
+      c = cv::waitKey(0);
+      // Movement
+      switch(c) {
+         case 119: { // W
+            eye = eye+Vec3d(cos(angle)*step, 0, sin(angle)*step);
+            break;
          }
-         MPI_Send(&red, 512, MPI_DOUBLE, 0, 0, MPI_COMM_WORLD);
-         MPI_Send(&blue, 512, MPI_DOUBLE, 0, 0, MPI_COMM_WORLD);
-         MPI_Send(&green, 512, MPI_DOUBLE, 0, 0, MPI_COMM_WORLD);
+         case 97: { // A
+            eye = eye-Vec3d(-sin(angle)*step, 0, cos(angle)*step);
+            break;
+         }
+         case 115: { // S
+            eye = eye-Vec3d(cos(angle)*step, 0, sin(angle)*step);
+            break;
+         }
+         case 100: { // D
+            eye = eye+Vec3d(-sin(angle)*step, 0, cos(angle)*step);
+            break;
+         }
+         case 2: { // LEFT
+            angle-=astep;
+            break;
+         }
+         case 3: { // RIGHT
+            angle+=astep;
+            break;
+         }
       }
-   }
-   MPI_Finalize();
-   return 0;
+   }*/
 }

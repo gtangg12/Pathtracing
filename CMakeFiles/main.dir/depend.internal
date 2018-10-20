@@ -525,8 +525,6 @@ CMakeFiles/main.dir/main.cpp.o
  /usr/local/include/boost/utility/identity_type.hpp
  /usr/local/include/boost/utility/result_of.hpp
  /usr/local/include/boost/version.hpp
- /usr/local/include/mpi.h
- /usr/local/include/mpi_portable_platform.h
  /usr/local/include/opencv/cxcore.h
  /usr/local/include/opencv2/calib3d.hpp
  /usr/local/include/opencv2/calib3d/calib3d_c.h
