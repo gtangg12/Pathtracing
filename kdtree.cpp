@@ -6,7 +6,7 @@ class Box {
 public:
    Vec3d bnds[2];
 
-   bool intersect(const Ray &ray, double &ent, double &ext) {
+   bool intersect(Ray &ray, double &ent, double &ext) {
       double tmin, tmax, ymin, ymax, zmin, zmax;
       tmin = (bnds[ray.sign[0]].x - ray.src.x)*ray.inv.x;
       tmax = (bnds[1-ray.sign[0]].x - ray.src.x)*ray.inv.x;
@@ -113,7 +113,7 @@ public:
       }
       left->build(depth+1);
       right->build(depth+1);
-      /*
+
       // pull up
       vector<pii> ls;
       set<pii> rs;
@@ -132,42 +132,13 @@ public:
          else
             left->ind.push_back(ls[i]);
       right->ind = vector<pii>(rs.begin(), rs.end());
-      sum2 += left->ind.size() + right->ind.size();*/
+      sum2 += left->ind.size() + right->ind.size();
    }
 
-   bool search(const Ray &ray, pii &tind, double &tmin, pdd &uv) {
-      double ent, ext;
-      if (!box.intersect(ray, ent, ext))
-         return false;
-      /*
-      double t;
+   bool searchNode(Ray &ray, pii &tind, double &tmin, pdd &uv) {
       bool found = false;
-      pdd bay;
-      Vec3d hit;
-      for (int i=0; i<ind.size(); i++)
-         if (obj[pms].intersect(trg, ray, t, bay) && t>0 && t<tmin) {
-            hit = ray.src+t*ray.dir;
-            if (!(hit>=box.bnds[0] && hit<=box.bnds[1]))
-               continue;
-            found = true;
-            tmin = t;
-            uv = bay;
-            tind = pii(pms, trg);
-         }
-      if (leaf)
-         return found;
-      Vec3d temp = ray.src;
-      if (temp[axis] <= splt) {
-         if (found && hit>=left->box.bnds[0] && hit<=left->box.bnds[1])
-            return left->search(ray, tind, tmin, uv) || found;
-         return left->search(ray, tind, tmin, uv) || right->search(ray, tind, tmin, uv) || found;
-      }
-      if (found && hit>=right->box.bnds[0] && hit<=right->box.bnds[1])
-         return right->search(ray, tind, tmin, uv) || found;
-      return right->search(ray, tind, tmin, uv) || left->search(ray, tind, tmin, uv) || found;*/
-      if (leaf) {
+      if (ind.size() > 0) {
          double t;
-         bool found = false;
          pdd bay;
          for (int i=0; i<ind.size(); i++)
             if (obj[pms].intersect(trg, ray, t, bay) && t>0 && t<tmin) {
@@ -179,12 +150,33 @@ public:
                uv = bay;
                tind = pii(pms, trg);
             }
-         return found;
       }
-      Vec3d temp = ray.src;
-      if (temp[axis] <= splt)
+      return found;
+   }
+
+   bool search(Ray &ray, pii &tind, double &tmin, pdd &uv) {
+      double ent, ext;
+      if (!box.intersect(ray, ent, ext))
+         return false;
+      bool found = searchNode(ray, tind, tmin, uv);
+      if (leaf)
+         return found;
+      Vec3d hit = ray.src+tmin*ray.dir;
+      if (ray.src[axis] <= splt) {
+         if (found && hit>=left->box.bnds[0] && hit<=left->box.bnds[1])
+            return left->search(ray, tind, tmin, uv) || found;
+         return left->search(ray, tind, tmin, uv) || right->search(ray, tind, tmin, uv) || found;
+      }
+      if (found && hit>=right->box.bnds[0] && hit<=right->box.bnds[1])
+         return right->search(ray, tind, tmin, uv) || found;
+      return right->search(ray, tind, tmin, uv) || left->search(ray, tind, tmin, uv) || found;
+      /*
+      if (leaf)
+         return searchNode(ray, tind, tmin, uv);
+      if (ray.src[axis] <= splt)
          return left->search(ray, tind, tmin, uv) || right->search(ray, tind, tmin, uv);
       return right->search(ray, tind, tmin, uv) || left->search(ray, tind, tmin, uv);
+      */
    }
 };
 
@@ -205,12 +197,14 @@ bool search(KDNode *root, Ray &ray, pii &tind, double &tmin, pdd &uv) {
       return false;
    stack<Block> stk;
    stk.push(Block(root, ent, ext));
+   bool found = false;
    while (!stk.empty()) {
       Block b = stk.top();
       stk.pop();
       curr = b.node;
       ent = b.ent; ext = b.ext;
       while(!curr->leaf) {
+         found |= curr->searchNode(ray, tind, tmin, uv);
          s = curr->splt;
          a = curr->axis;
          tdir = ray.dir[a] == 0 ? 0.000001 : ray.dir[a];
@@ -228,23 +222,8 @@ bool search(KDNode *root, Ray &ray, pii &tind, double &tmin, pdd &uv) {
             ext = tmid;
          }
       }
-      if (curr->ind.size() > 0) {
-         double t;
-         bool found = false;
-         pdd bay;
-         for (int i=0; i<curr->ind.size(); i++)
-            if (obj[curr->pms].intersect(curr->trg, ray, t, bay) && t>0 && t<tmin) {
-               Vec3d hit = ray.src+t*ray.dir;
-               if (!(hit>=curr->box.bnds[0] && hit<=curr->box.bnds[1]))
-                  continue;
-               found = true;
-               tmin = t;
-               uv = bay;
-               tind = pii(curr->pms, curr->trg);
-            }
-         if (found)
-            return true;
-      }
+      found |= curr->searchNode(ray, tind, tmin, uv);
+      if (found) return true;
    }
    return false;
 }
