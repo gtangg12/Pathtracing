@@ -214,10 +214,11 @@ bool search(KDNode *root, Ray &ray, pii &tind, double &tmin, pdd &uv) {
             swap(near, far);
          if (tmid >= ext || tmid < 0)
             curr = near;
-         else if (tmid <= ent)
+         else if (tmid <= ent && tmid < tmin)
             curr = far;
          else {
-            stk.push(Block(far, tmid, ext));
+            if (tmid < tmin)
+               stk.push(Block(far, tmid, ext));
             curr = near;
             ext = tmid;
          }
