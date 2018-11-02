@@ -1,4 +1,4 @@
-#define LEAF 5
+#define LEAF 3
 #define pms ind[i].first
 #define trg ind[i].second
 
@@ -6,7 +6,7 @@ class Box {
 public:
    Vec3d bnds[2];
 
-   bool intersect(const Ray &ray) {
+   bool intersect(const Ray &ray, double &ent, double &ext) {
       double tmin, tmax, ymin, ymax, zmin, zmax;
       tmin = (bnds[ray.sign[0]].x - ray.src.x)*ray.inv.x;
       tmax = (bnds[1-ray.sign[0]].x - ray.src.x)*ray.inv.x;
@@ -22,6 +22,8 @@ public:
       zmax = (bnds[1-ray.sign[2]].z - ray.src.z) * ray.inv.z;
       if ((tmin > zmax) || (zmin > tmax))
          return false;
+      ent = tmin;
+      ext = tmax;
       return true;
    }
 
@@ -36,6 +38,7 @@ public:
 // Stats
 int tris = 0;
 int sum = 0;
+int sum2 = 0;
 
 // SAH
 double trav = 7.0;
@@ -100,7 +103,6 @@ public:
          if (l) left->ind.push_back(ind[i]);
          if (r) right->ind.push_back(ind[i]);
       }
-
       // if centers are the same
       if (max(left->ind.size(), right->ind.size()) == ind.size()) {
          sum += ind.size();
@@ -109,14 +111,60 @@ public:
          free(right);
          return;
       }
-
       left->build(depth+1);
       right->build(depth+1);
+      /*
+      // pull up
+      vector<pii> ls;
+      set<pii> rs;
+      for (int i=0; i<left->ind.size(); i++)
+         ls.push_back(left->ind[i]);
+      for (int i=0; i<right->ind.size(); i++)
+         rs.insert(right->ind[i]);
+      ind.clear();
+      left->ind.clear();
+      right->ind.clear();
+      for (int i=0; i<ls.size(); i++)
+         if (rs.find(ls[i]) != rs.end()) {
+            rs.erase(ls[i]);
+            ind.push_back(ls[i]);
+         }
+         else
+            left->ind.push_back(ls[i]);
+      right->ind = vector<pii>(rs.begin(), rs.end());
+      sum2 += left->ind.size() + right->ind.size();*/
    }
 
    bool search(const Ray &ray, pii &tind, double &tmin, pdd &uv) {
-      if (!box.intersect(ray))
+      double ent, ext;
+      if (!box.intersect(ray, ent, ext))
          return false;
+      /*
+      double t;
+      bool found = false;
+      pdd bay;
+      Vec3d hit;
+      for (int i=0; i<ind.size(); i++)
+         if (obj[pms].intersect(trg, ray, t, bay) && t>0 && t<tmin) {
+            hit = ray.src+t*ray.dir;
+            if (!(hit>=box.bnds[0] && hit<=box.bnds[1]))
+               continue;
+            found = true;
+            tmin = t;
+            uv = bay;
+            tind = pii(pms, trg);
+         }
+      if (leaf)
+         return found;
+      Vec3d temp = ray.src;
+      if (temp[axis] <= splt) {
+         if (found && hit>=left->box.bnds[0] && hit<=left->box.bnds[1])
+            return left->search(ray, tind, tmin, uv) || found;
+         return left->search(ray, tind, tmin, uv) || right->search(ray, tind, tmin, uv) || found;
+      }
+      if (found && hit>=right->box.bnds[0] && hit<=right->box.bnds[1])
+         return right->search(ray, tind, tmin, uv) || found;
+      return right->search(ray, tind, tmin, uv) || left->search(ray, tind, tmin, uv) || found;*/
       if (leaf) {
          double t;
          bool found = false;
@@ -140,6 +188,68 @@ public:
    }
 };
 
+// Recursive Algorithm to minimize ray-box intersections
+class Block {
+public:
+   KDNode *node;
+   double ent, ext;
+   Block(KDNode *node, const double ent, const double ext): node(node), ent(ent), ext(ext) {}
+};
+
+bool search(KDNode *root, Ray &ray, pii &tind, double &tmin, pdd &uv) {
+   double ent, ext, s, tdir, tmid;
+   int a;
+   KDNode *curr = root;
+   KDNode *near, *far;
+   if (!root->box.intersect(ray, ent, ext))
+      return false;
+   stack<Block> stk;
+   stk.push(Block(root, ent, ext));
+   while (!stk.empty()) {
+      Block b = stk.top();
+      stk.pop();
+      curr = b.node;
+      ent = b.ent; ext = b.ext;
+      while(!curr->leaf) {
+         s = curr->splt;
+         a = curr->axis;
+         tdir = ray.dir[a] == 0 ? 0.000001 : ray.dir[a];
+         tmid = (s-ray.src[a])/tdir;
+         near = curr->left; far = curr->right;
+         if (ray.src[a] > s)
+            swap(near, far);
+         if (tmid >= ext || tmid < 0)
+            curr = near;
+         else if (tmid <= ent)
+            curr = far;
+         else {
+            stk.push(Block(far, tmid, ext));
+            curr = near;
+            ext = tmid;
+         }
+      }
+      if (curr->ind.size() > 0) {
+         double t;
+         bool found = false;
+         pdd bay;
+         for (int i=0; i<curr->ind.size(); i++)
+            if (obj[curr->pms].intersect(curr->trg, ray, t, bay) && t>0 && t<tmin) {
+               Vec3d hit = ray.src+t*ray.dir;
+               if (!(hit>=curr->box.bnds[0] && hit<=curr->box.bnds[1]))
+                  continue;
+               found = true;
+               tmin = t;
+               uv = bay;
+               tind = pii(curr->pms, curr->trg);
+            }
+         if (found)
+            return true;
+      }
+   }
+   return false;
+}
+
+// Construct Tree
 void buildTree(KDNode* root) {
    vector<pii> v;
    for (int i=0; i<obj.size(); i++) {

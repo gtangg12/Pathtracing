@@ -1,0 +1,31 @@
+# x, y, z, step, astep, angle, zoom
+C 500 200 -50 50 90 0 1.0
+O sponza2.txt
+# type, light, pos, RGB values
+L p 0 400 0 1 1 1 35000
+#L p 700 300 0 1 1 1 10000
+#L p -700 300 0 1 1 1 10000
+T Material__298 background
+#T Material__47 -
+T Material__57 vase_plant
+T arch sponza_arch_diff
+T bricks spnza_bricks_a_diff
+T ceiling sponza_ceiling_a_diff
+T chain chain_texture
+T column_a sponza_column_a_diff
+T column_b sponza_column_b_diff
+T column_c sponza_column_c_diff
+T details sponza_details_diff
+T fabric_a sponza_fabric_diff
+T fabric_c sponza_curtain_diff
+T fabric_d sponza_fabric_blue_diff
+T fabric_e sponza_fabric_green_diff
+T fabric_f sponza_curtain_green_diff
+T fabric_g sponza_curtain_blue_diff
+T flagpole sponza_flagpole_diff
+T floor sponza_floor_a_diff
+T leaf sponza_thorn_diff
+T roof sponza_roof_diff
+T vase vase_dif
+T vase_hanging vase_hanging
+T vase_round vase_round

@@ -1,5 +1,5 @@
-# x, y, z, step, astep, angle
-C 125 130 -75 50 45 130 1.0
+# x, y, z, step, astep, angle, zoom
+C 125 130 -75 50 90 130 1.0
 O bedroom.txt
 # type, light, pos, RGB values
 # L d 1 1 0 1 1 1 1000

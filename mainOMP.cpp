@@ -2,7 +2,7 @@
 #include "polygonMesh.cpp"
 #include "lighting.cpp"
 
-cv::Mat image(512, 512, CV_8UC3, cv::Scalar(210, 160, 30));
+cv::Mat image(256, 256, CV_8UC3, cv::Scalar(210, 160, 30));
 //Vec3d background(0.118, 0.627, 0.824);
 Vec3d background(1);
 vector<PolygonMesh> obj;
@@ -198,8 +198,8 @@ Vec3d render(const Vec3d &src, const double zoom, const double angle, int i, int
       }
    Vec3d direct = paint/4.0;
    // Global Illumination
-   int Nsamples = 4096;
-   paint = direct+2.0*mclr*globalIllumination(Nsamples, mnrm, mhit)/((double)Nsamples);
+   int Nsamples = 0;
+   paint = direct;//+2.0*mclr*globalIllumination(Nsamples, mnrm, mhit)/((double)Nsamples);
    return paint;
 }
 
@@ -207,7 +207,7 @@ Vec3d render(const Vec3d &src, const double zoom, const double angle, int i, int
 #include <mpi.h>
 
 int main(int argc, char** argv) {
-   string name = "car";
+   string name = "room";
    init(name);
    buildTree(tree);
    int c = 0, sumT = 0;
@@ -227,14 +227,15 @@ int main(int argc, char** argv) {
    double blue[512];
    int process[513]; // 1 extra for size
    double camera[4];
-   int slaves = 239;
+   int slaves = 1;
    if (world_rank == 0) {
-      ifstream fin("path.txt");
+      ifstream fin("roompath.txt");
       int N;
       fin >> N;
       int cnt = 0;
       string line;
-      double angles[16] = {0, 10, 20, 30, 45, 60, 75, 90, 180, -90, -75, -60, -45, -30, -20, -10};
+      //double angles[16] = {0, 10, 20, 30, 45, 60, 75, 90, 180, -90, -75, -60, -45, -30, -20, -10};
+      double angles[16] = {0, 22.5, 45, 67.5, 90, 112.5, 135, 157.5, 180, 202.5, 225, 247.5, 270, 292.5, 315, 337.5};
       for (int i=0; i<N; i++) {
          double a, b, c;
          fin >> a >> b >> c;
@@ -248,13 +249,13 @@ int main(int argc, char** argv) {
             angle = -acos(-unit(Vec3d(a, 0, c)).x);
             angle += 0.01745329251*angles[j];
             camera[0] = a; camera[1] = b; camera[2] = c; camera[3] = angle;
-            int pc = 24; //skip cores on same node as master
+            int pc = 0; //skip cores on same node as master
             // allocate work by rows
             for (int I=0; I<image.rows; I++) {
                parr[pc].push_back(I);
                pc++;
                pc%=slaves;
-               if (pc == 0) pc = 24;
+               //if (pc == 0) pc = 24;
             }
             // send work
             for (int A=0; A<slaves; A++) {
@@ -270,8 +271,8 @@ int main(int argc, char** argv) {
             for (int A=0; A<slaves; A++) {
                for (int B=0; B<parr[A].size(); B++) { // update row buffers according to parr (processes)
                   MPI_Recv(&red, 512, MPI_DOUBLE, A+1, 0, MPI_COMM_WORLD, MPI_STATUS_IGNORE);
-                  MPI_Recv(&blue, 512, MPI_DOUBLE, A+1, 0, MPI_COMM_WORLD, MPI_STATUS_IGNORE);
                   MPI_Recv(&green, 512, MPI_DOUBLE, A+1, 0, MPI_COMM_WORLD, MPI_STATUS_IGNORE);
+                  MPI_Recv(&blue, 512, MPI_DOUBLE, A+1, 0, MPI_COMM_WORLD, MPI_STATUS_IGNORE);
 		            for (int k=0; k<image.cols; k++) {
                      cv::Vec3b& color = image.at<cv::Vec3b>(parr[A][B], k);
                      // OpenCV uses BGR
@@ -281,7 +282,9 @@ int main(int argc, char** argv) {
                   }
                }
 	         }
-            cv::imwrite("CARDATA/"+name+to_string(cnt-1)+".jpg", image);
+            cv::imshow("TEST", image);
+            cv::waitKey(0);
+            //cv::imwrite("CARDATA/"+name+to_string(cnt-1)+".jpg", image);
          }
       }
    }
@@ -301,12 +304,12 @@ int main(int argc, char** argv) {
                for (int J=0; J<image.cols; J++) {
                   Vec3d paint = render(eye, zoom, angle, row, J);
                   red[J] = paint.x;
-                  blue[J] = paint.y;
-                  green[J] = paint.z;
+                  green[J] = paint.y;
+                  blue[J] = paint.z;
                }
                MPI_Send(&red, 512, MPI_DOUBLE, 0, 0, MPI_COMM_WORLD);
-               MPI_Send(&blue, 512, MPI_DOUBLE, 0, 0, MPI_COMM_WORLD);
                MPI_Send(&green, 512, MPI_DOUBLE, 0, 0, MPI_COMM_WORLD);
+               MPI_Send(&blue, 512, MPI_DOUBLE, 0, 0, MPI_COMM_WORLD);
                cout << world_rank << ' ' << row << endl;
             }
          }

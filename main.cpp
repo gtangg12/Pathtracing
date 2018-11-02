@@ -2,7 +2,7 @@
 #include "polygonMesh.cpp"
 #include "lighting.cpp"
 
-cv::Mat image(512, 512, CV_8UC3, cv::Scalar(210, 160, 30));
+cv::Mat image(300, 300, CV_8UC3, cv::Scalar(210, 160, 30));
 //Vec3d background(0.118, 0.627, 0.824);
 Vec3d background(1);
 vector<PolygonMesh> obj;
@@ -132,10 +132,11 @@ Vec3d mclr[1024][1024];
 Vec3d mnrm[1024][1024];
 Vec3d mhit[1024][1024];
 
-Vec3d castRay(const Ray &ray, const int depth, const int r, const int c) {
+Vec3d castRay(Ray &ray, const int depth, const int r, const int c) {
    pii tind; pdd uv;
    double tmin = FLT_MAX;
-   if (!tree->search(ray, tind, tmin, uv)) {
+   //if (!tree->search(ray, tind, tmin, uv)) {
+   if (!search(tree, ray, tind, tmin, uv)) {
       if (depth == 0) {
          mhit[r][c] = Vec3d(-99999);
          return background;
@@ -153,7 +154,8 @@ Vec3d castRay(const Ray &ray, const int depth, const int r, const int c) {
       double dis;
       light[k].illuminate(hit, ldir, shade, dis);
       Ray lray(hit, ldir);
-      bool vis = !tree->search(lray, temp, dis, uv);
+      //bool vis = !tree->search(lray, temp, dis, uv);
+      bool vis = !search(tree, lray, temp, dis, uv);
       direct = direct + vis*max(0.0, dot(ldir, nrm))*shade;
    }
    // primary ray
@@ -188,17 +190,18 @@ void render(const Vec3d &src, const double zoom, const double angle) {
    //#pragma omp parallel for
    for (int i=0; i<image.rows; i++) {
       for (int j=0; j<image.cols; j++) {
+         //cout << i << ' ' << j << endl;
          Vec3d paint(0);
          // ray-bundle tracing
          double x = 0, y = 0;
-         for (y=-0.1; y<=0.1; y+=0.2)
-            for (x=-0.1; x<=0.1; x+=0.2) {
+         //for (y=-0.01; y<=0.01; y+=0.02)
+            //for (x=-0.01; x<=0.01; x+=0.023) {
                Vec3d pxl(0.5-(double)(j+x)/image.rows, 0.5-(double)(i+y)/image.rows, zoom);
                Vec3d snk = Vec3d(src.x+sin(angle)*pxl.x+cos(angle)*pxl.z,  src.y+pxl.y, src.z-cos(angle)*pxl.x+sin(angle)*pxl.z);
                Ray ray(src, unit(snk - src));
                paint = paint + castRay(ray, 0, i, j);
-            }
-         paint = paint/4.0;
+            //}
+         //paint = paint/4.0;
          mpnt[i][j] = paint;
       }
    }
@@ -207,7 +210,7 @@ void render(const Vec3d &src, const double zoom, const double angle) {
    //#pragma omp parallel for
    for (int i=0; i<image.rows; i++) {
       for (int j=0; j<image.cols; j++) {
-         mpnt[i][j] = mpnt[i][j] + 2.0*mclr[i][j]*globalIllumination(Nsamples, i, j)/((double)Nsamples);
+         mpnt[i][j] = mpnt[i][j]; //+ 2.0*mclr[i][j]*globalIllumination(Nsamples, i, j)/((double)Nsamples);
       }
    }
    // Set Color
@@ -216,43 +219,49 @@ void render(const Vec3d &src, const double zoom, const double angle) {
       for (int j=0; j<image.cols; j++) {
          cv::Vec3b& color = image.at<cv::Vec3b>(i, j);
          // OpenCV uses BGR
-         Vec3d nrm = mnrm[i][j];
-         nrm = (nrm+Vec3d(1.0))/2.0;
-         color[0] = min(255, (int)(255.0*nrm.z));
-         color[1] = min(255, (int)(255.0*nrm.y));
-         color[2] = min(255, (int)(255.0*nrm.x));
+         Vec3d paint = mpnt[i][j];//mnrm[i][j];
+         //paint = (paint+Vec3d(1.0))/2.0;
+         color[0] = min(255, (int)(255.0*paint.z));
+         color[1] = min(255, (int)(255.0*paint.y));
+         color[2] = min(255, (int)(255.0*paint.x));
       }
    }
 }
 
 int main() {
-   string name = "car";
+   string name = "sponza";
    init(name);
    buildTree(tree);
    int c = 0, sumT = 0;
    for (int i=0; i<obj.size(); i++)
       sumT+=obj[i].tris.size();
    cout << "Triangles: " << sumT << endl;
-
-   ifstream fin("path.txt");
+   cout << sum << endl;
+   cout << sum2 << endl;
+   ifstream fin("sponzapath.txt");
    int N;
    fin >> N;
    int cnt = 0;
    string line;
-   double angles[16] = {0, 10, 20, 30, 45, 60, 75, 90, 180, -90, -75, -60, -45, -30, -20, -10};
+   double angles[16] = {0, 22.5, 45, 67.5, 90, 112.5, 135, 157.5, 180, 202.5, 225, 247.5, 270, 292.5, 315, 337.5};
    for (int i=0; i<N; i++) {
       double a, b, c;
       fin >> a >> b >> c;
       vector<string> tkns;
       boost::split(tkns, line, boost::is_any_of(" "), boost::token_compress_on);
       eye = Vec3d(a, b, c);
-      for (int j=0; j<16; j++) {
-         double angle = -acos(-unit(Vec3d(a, 0, c)).x);
-         angle += 0.01745329251*angles[j];
+      for (int j=0; j<1; j++) {
+         //double angle = -acos(-unit(Vec3d(a, 0, c)).x);
+         angle = 0.01745329251*angles[j];
+         println(eye);
+         auto start = std::chrono::high_resolution_clock::now();
          render(eye, zoom, angle);
-         //cv::imshow("Test", image);
-         //cv::waitKey(0);
-         cv::imwrite("CARDATANRM/"+name+to_string(cnt)+".jpg", image);
+         auto finish = std::chrono::high_resolution_clock::now();
+         chrono::duration<double> elapsed = finish - start;
+         cout << "Elapsed time: " << elapsed.count() << " s\n";
+         cv::imshow("Test", image);
+         cv::waitKey(0);
+         //cv::imwrite("Images/"+name+to_string(cnt)+".jpg", image);
          cnt++;
          cout << cnt << endl;
       }
@@ -267,7 +276,7 @@ int main() {
       chrono::duration<double> elapsed = finish - start;
       cout << "Elapsed time: " << elapsed.count() << " s\n";
       cv::imshow("Scene", image);
-      cv::imwrite("Images/"+name+".jpg", image);
+      //cv::imwrite("Images/"+name+".jpg", image);
       c = cv::waitKey(0);
       // Movement
       switch(c) {
