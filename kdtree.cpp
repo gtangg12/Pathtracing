@@ -41,7 +41,7 @@ int sum = 0;
 int sum2 = 0;
 
 // SAH
-double trav = 7.0;
+double trav = 5.0;
 double inst = 5.0;
 
 class KDNode {
@@ -207,26 +207,27 @@ bool search(KDNode *root, Ray &ray, pii &tind, double &tmin, pdd &uv) {
          found |= curr->searchNode(ray, tind, tmin, uv);
          s = curr->splt;
          a = curr->axis;
-         tdir = ray.dir[a] == 0 ? 0.000001 : ray.dir[a];
+         tdir = ray.dir[a] == 0 ? 0.0000001 : ray.dir[a];
          tmid = (s-ray.src[a])/tdir;
          near = curr->left; far = curr->right;
          if (ray.src[a] > s)
             swap(near, far);
          if (tmid >= ext || tmid < 0)
             curr = near;
-         else if (tmid <= ent && tmid < tmin)
+         else if (tmid <= ent && tmid <= tmin)
             curr = far;
          else {
-            if (tmid < tmin)
+            if (tmid <= tmin)
                stk.push(Block(far, tmid, ext));
             curr = near;
             ext = tmid;
          }
       }
-      found |= curr->searchNode(ray, tind, tmin, uv);
-      if (found) return true;
+      bool temp = curr->searchNode(ray, tind, tmin, uv);
+      if (temp) return true;
+      //if (found) return true;
    }
-   return false;
+   return found;
 }
 
 // Construct Tree
