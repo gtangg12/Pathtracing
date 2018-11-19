@@ -15,8 +15,9 @@ public:
 class Triangle {
 public:
    Vec3i vi, ni, ti;
-   int tm;
-   Triangle(const Vec3i &vi, const Vec3i &ni, const Vec3i &ti, const int tm): vi(vi), ni(ni), ti(ti), tm(tm) {}
+   int tm, reft;
+   Triangle(const Vec3i &vi, const Vec3i &ni, const Vec3i &ti, const int tm,
+      const int reft): vi(vi), ni(ni), ti(ti), tm(tm), reft(reft) {}
 };
 
 class PolygonMesh {
@@ -52,13 +53,14 @@ public:
       return true;
    }
 
-   void surfaceProperties(const int ind, const Ray &ray, const pdd &uv, Vec3d &nrm, Vec3d &txt) {
+   void surfaceProperties(const int ind, const Ray &ray, const pdd &uv, Vec3d &nrm, Vec3d &txt, int &reft) {
       // Normal
       Vec3i N = tris[ind].ni;
       double w = 1.0-uv.first-uv.second;
       nrm = unit(w*norm[N.x] + uv.first*norm[N.y] + uv.second*norm[N.z]);
       // No texture option
       int mn = tris[ind].tm;
+      reft = tris[ind].reft;
       if (mn == -99999) {
          txt = Vec3d(1);
          return;
@@ -80,10 +82,10 @@ public:
          for (int i=0; i<3; i++) {
             int r = 0, c = 0;
             if (T[i] != -1) {
-               r = (int)(text[T[i]].first*tref.rows);
-               c = (int)(text[T[i]].second*tref.rows);
+               r = (int)(text[T[i]].first*(tref.rows));
+               c = (int)(text[T[i]].second*(tref.cols));
             }
-            cv::Vec3b temp = tref.at<cv::Vec3b>(cv::Point(r, c));
+            cv::Vec3b temp = tref.at<cv::Vec3b>(cv::Point(min(max(0,r), tref.rows), min(max(0,c), tref.cols)));
             color[i] = Vec3d(temp[2], temp[1], temp[0]); // BGR
          }
          txt = (w*color[0] + uv.first*color[1] + uv.second*color[2])/256.0;

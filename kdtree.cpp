@@ -89,6 +89,13 @@ public:
             splt = curr;
          }
       }
+      if (inst*ind.size() <= minv) {
+         sum += ind.size();
+         leaf = true;
+         free(left);
+         free(right);
+         return;
+      }
       left->box.bnds[1][axis] = splt;
       right->box.bnds[0][axis] = splt;
       // Assign triangles based on locations of vert relative to splt
@@ -113,7 +120,7 @@ public:
       }
       left->build(depth+1);
       right->build(depth+1);
-
+      /*
       // pull up
       vector<pii> ls;
       set<pii> rs;
@@ -133,6 +140,7 @@ public:
             left->ind.push_back(ls[i]);
       right->ind = vector<pii>(rs.begin(), rs.end());
       sum2 += left->ind.size() + right->ind.size();
+      */
    }
 
    bool searchNode(Ray &ray, pii &tind, double &tmin, pdd &uv) {
@@ -203,8 +211,9 @@ bool search(KDNode *root, Ray &ray, pii &tind, double &tmin, pdd &uv) {
       stk.pop();
       curr = b.node;
       ent = b.ent; ext = b.ext;
+      //if (ent >= tmin) break;
       while(!curr->leaf) {
-         found |= curr->searchNode(ray, tind, tmin, uv);
+         //found |= curr->searchNode(ray, tind, tmin, uv);
          s = curr->splt;
          a = curr->axis;
          tdir = ray.dir[a] == 0 ? 0.0000001 : ray.dir[a];
@@ -214,10 +223,10 @@ bool search(KDNode *root, Ray &ray, pii &tind, double &tmin, pdd &uv) {
             swap(near, far);
          if (tmid >= ext || tmid < 0)
             curr = near;
-         else if (tmid <= ent && tmid <= tmin)
+         else if (tmid <= ent )//&& tmid <= tmin)
             curr = far;
          else {
-            if (tmid <= tmin)
+            //if (tmid <= tmin)
                stk.push(Block(far, tmid, ext));
             curr = near;
             ext = tmid;

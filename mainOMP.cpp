@@ -52,6 +52,7 @@ void init(string scene) {
       string line;
       int tcnt = 0;
       int tval;
+      int reft = 0;
       while(getline(meshReader, line)) {
          vector<string> tkns;
          boost::split(tkns, line, boost::is_any_of(" "), boost::token_compress_on);
@@ -62,7 +63,10 @@ void init(string scene) {
                break;
             }
             case 'g': {
+               reft = 0;
                tval = -99999;
+               if (tkns.size() == 1)
+                  break;
                if (tarr.find(tkns[1]) != tarr.end()) {
                   cv::Mat tmap = cv::imread(scene+"/"+tarr[tkns[1]]+".jpg", CV_LOAD_IMAGE_COLOR);
                   mesh.tmaps.push_back(tmap);
@@ -70,6 +74,10 @@ void init(string scene) {
                   // interpolate by point
                   if (tkns.size()>2 && tkns[2][0] == '?')
                      tval=-tval-1;
+               }
+               if (tkns.size()>2) {
+                  if (tkns[2][0]=='1')
+                     reft = 1;
                }
                break;
             }
@@ -98,7 +106,7 @@ void init(string scene) {
                }
                // face, normal, texture
                for (int j=1; j<sz-1; j++) {
-                  Triangle tri(Vec3i(data[0]-1, data[j*num]-1, data[(j+1)*num]-1), Vec3i(-1), Vec3i(-1), tval);
+                  Triangle tri(Vec3i(data[0]-1, data[j*num]-1, data[(j+1)*num]-1), Vec3i(-1), Vec3i(-1), tval, reft);
                   if (num > 2) {
                      tri.ti = Vec3i(data[1]-1, data[j*num+1]-1, data[(j+1)*num+1]-1);
                      tri.ni = Vec3i(data[2]-1, data[j*num+2]-1, data[(j+1)*num+2]-1);
@@ -126,10 +134,12 @@ void init(string scene) {
 KDNode* tree = new KDNode();
 int MAX_DEPTH = 1;
 
-Vec3d castRay(const Ray &ray, const int depth, Vec3d &mclr, Vec3d &mnrm, Vec3d &mhit) {
+Vec3d temp2;
+
+Vec3d castRay(Ray &ray, const int depth, Vec3d &mclr, Vec3d &mnrm, Vec3d &mhit) {
    pii tind; pdd uv;
    double tmin = FLT_MAX;
-   if (!tree->search(ray, tind, tmin, uv)) {
+   if (!search(tree, ray, tind, tmin, uv)) {
       if (depth == 0) {
          mhit = Vec3d(-99999);
          return background;
@@ -137,9 +147,12 @@ Vec3d castRay(const Ray &ray, const int depth, Vec3d &mclr, Vec3d &mnrm, Vec3d &
       return Vec3d(0);
    }
    Vec3d hit, nrm, txt;
-   obj[tind.first].surfaceProperties(tind.second, ray, uv, nrm, txt);
+   int reft;
+   obj[tind.first].surfaceProperties(tind.second, ray, uv, nrm, txt, reft);
    hit = ray.src + tmin*ray.dir + 0.0001*nrm;
+   //Vec3d direct = Vec3d();
    Vec3d direct = Vec3d();
+   Vec3d ref = Vec3d();
    // Direct Lighting
    pii temp;
    for (int k=0; k<light.size(); k++) {
@@ -147,7 +160,7 @@ Vec3d castRay(const Ray &ray, const int depth, Vec3d &mclr, Vec3d &mnrm, Vec3d &
       double dis;
       light[k].illuminate(hit, ldir, shade, dis);
       Ray lray(hit, ldir);
-      bool vis = !tree->search(lray, temp, dis, uv);
+      bool vis = !search(tree, ray, tind, tmin, uv);
       direct = direct + vis*max(0.0, dot(ldir, nrm))*shade;
    }
    // GI Primary
@@ -155,11 +168,18 @@ Vec3d castRay(const Ray &ray, const int depth, Vec3d &mclr, Vec3d &mnrm, Vec3d &
       mclr = txt*obj[tind.first].albedo;
       mnrm = nrm;
       mhit = hit;
+      // reflection
+      if (reft) {
+         Ray rray = Ray(hit, reflect(ray.dir, nrm));
+         ref = ref+castRay(rray, -1, temp2, temp2, temp2);
+      }
    }
-   return txt*obj[tind.first].albedo*direct/M_PI;
+   if (depth == -1)
+      return txt*obj[tind.first].albedo*direct/M_PI;
+   return 0.6*txt*obj[tind.first].albedo*direct/M_PI+0.4*ref;
+   //return txt*obj[tind.first].albedo*direct/M_PI;
 }
 
-Vec3d temp;
 // Global Illumination
 Vec3d globalIllumination(const int N, Vec3d &nrm, Vec3d &hit) {
    Vec3d Nt, Nb;
@@ -174,7 +194,7 @@ Vec3d globalIllumination(const int N, Vec3d &nrm, Vec3d &hit) {
                   sample.x * Nb.y + sample.y * nrm.y + sample.z * Nt.y,
                   sample.x * Nb.z + sample.y * nrm.z + sample.z * Nt.z);
       Ray iray(hit, world);
-      indirect = indirect + r1*castRay(iray, -1, temp, temp, temp);
+      indirect = indirect + r1*castRay(iray, -1, temp2, temp2, temp2);
    }
    return indirect;
 }
@@ -184,22 +204,22 @@ Vec3d render(const Vec3d &src, const double zoom, const double angle, int i, int
    // ray-bundle tracing
    double x = 0, y = 0;
    Vec3d mclr, mnrm, mhit;
+   int cnt = 0;
    for (y=-0.1; y<=0.1; y+=0.1)
       for (x=-0.1; x<=0.1; x+=0.1) {
-         if ((x == 0) ^ (y == 0))
-            continue;
+         cnt++;
          Vec3d pxl(0.5-(double)(j+x)/image.rows, 0.5-(double)(i+y)/image.rows, zoom);
          Vec3d snk = Vec3d(src.x+sin(angle)*pxl.x+cos(angle)*pxl.z, src.y+pxl.y, src.z-cos(angle)*pxl.x+sin(angle)*pxl.z);
          Ray ray(src, unit(snk - src));
-         if (x == 0  && y == 0)
-            castRay(ray, 0, mclr, mnrm, mhit);
+         if (x == 0 && y == 0)
+            paint = paint + castRay(ray, 0, mclr, mnrm, mhit);
          else
-            paint = paint + castRay(ray, 0, temp, temp, temp);
+            paint = paint + castRay(ray, 0, temp2, temp2, temp2);
       }
-   Vec3d direct = paint/4.0;
+   Vec3d direct = paint/9.0;
    // Global Illumination
-   int Nsamples = 0;
-   paint = direct;//+2.0*mclr*globalIllumination(Nsamples, mnrm, mhit)/((double)Nsamples);
+   int Nsamples = 4;
+   paint = direct+2.0*mclr*globalIllumination(Nsamples, mnrm, mhit)/((double)Nsamples);
    return paint;
 }
 
@@ -207,7 +227,7 @@ Vec3d render(const Vec3d &src, const double zoom, const double angle, int i, int
 #include <mpi.h>
 
 int main(int argc, char** argv) {
-   string name = "room";
+   string name = "cbox";
    init(name);
    buildTree(tree);
    int c = 0, sumT = 0;
@@ -229,7 +249,7 @@ int main(int argc, char** argv) {
    double camera[4];
    int slaves = 1;
    if (world_rank == 0) {
-      ifstream fin("roompath.txt");
+      ifstream fin("cboxpath.txt");
       int N;
       fin >> N;
       int cnt = 0;
@@ -284,7 +304,7 @@ int main(int argc, char** argv) {
 	         }
             cv::imshow("TEST", image);
             cv::waitKey(0);
-            //cv::imwrite("CARDATA/"+name+to_string(cnt-1)+".jpg", image);
+            //cv::imwrite("CBOXDATA/"+name+to_string(cnt-1)+".jpg", image);
          }
       }
    }
@@ -310,7 +330,7 @@ int main(int argc, char** argv) {
                MPI_Send(&red, 512, MPI_DOUBLE, 0, 0, MPI_COMM_WORLD);
                MPI_Send(&green, 512, MPI_DOUBLE, 0, 0, MPI_COMM_WORLD);
                MPI_Send(&blue, 512, MPI_DOUBLE, 0, 0, MPI_COMM_WORLD);
-               cout << world_rank << ' ' << row << endl;
+               //cout << world_rank << ' ' << row << endl;
             }
          }
       }
