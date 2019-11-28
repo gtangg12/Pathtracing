@@ -1,141 +1,39 @@
-#include "utilities.cpp"
-#include "polygonMesh.cpp"
-#include "lighting.cpp"
+/**
+  mainOMP.cpp is the parallel implementation of main.cpp. It supports rendering
+  of multiple positions of a scene, each at multiple viewing angles (training
+  data for Precision Graphics), as well as parallel implementation of free exploration.
+  Does not support buffers.
 
-cv::Mat image(256, 256, CV_8UC3, cv::Scalar(210, 160, 30));
-//Vec3d background(0.118, 0.627, 0.824);
-Vec3d background(1);
+  Note: use mpirun ./mainOMP to run.
+*/
+#include "util/utilities.cpp"
+#include "util/polygonMesh.cpp"
+#include "util/lighting.cpp"
+
+/**
+  Stuff needed for raytracing. Initialized by reader.cpp.
+*/
+cv::Mat image(512, 512, CV_8UC3, cv::Scalar(210, 160, 30));
+Vec3d eye(0), background(1); //background(0.118, 0.627, 0.824);
 vector<PolygonMesh> obj;
 vector<Light> light;
 double step, astep, angle, zoom;
-Vec3d eye(0);
-
-void init(string scene) {
-   // Scene File Reader
-   ifstream reader(scene+"/master.txt");
-   string input;
-   vector<string> files;
-   unordered_map<string, string> tarr;
-   while(getline(reader, input)) {
-      vector<string> data;
-      boost::split(data, input, boost::is_any_of(" "), boost::token_compress_on);
-      char type = data[0][0];
-      if (type == '#')
-         continue;
-      else if (type == '%') // force quit
-         break;
-      else if (type == 'C') {
-         double ud = 0.01745329251;
-         eye = Vec3d(stod(data[1]), stod(data[2]), stod(data[3]));
-         step = stod(data[4]);
-         astep = ud*stod(data[5]);
-         angle = ud*stod(data[6]);
-         zoom = stod(data[7]);
-      }
-      else if (type == 'T') {
-         tarr[data[1]] = data[2];
-      }
-      else if (type == 'L') {
-         light.push_back(Light(stod(data[8]),
-                         Vec3d(stod(data[2]), stod(data[3]), stod(data[4])),
-                         Vec3d(stod(data[5]), stod(data[6]), stod(data[7])),
-                         data[1][0]));
-      }
-      else if (type == 'O') {
-         files.push_back(data[1]);
-      }
-   }
-   // OBJ File Reader
-   for (int i=0; i<files.size(); i++) {
-      PolygonMesh mesh(Vec3d(1));
-      ifstream meshReader(scene+"/"+files[i]);
-      string line;
-      int tcnt = 0;
-      int tval;
-      int reft = 0;
-      while(getline(meshReader, line)) {
-         vector<string> tkns;
-         boost::split(tkns, line, boost::is_any_of(" "), boost::token_compress_on);
-         char type = tkns[0][tkns[0].size()-1];
-         switch(type) {
-            case '%': {
-               tcnt = -99999;
-               break;
-            }
-            case 'g': {
-               reft = 0;
-               tval = -99999;
-               if (tkns.size() == 1)
-                  break;
-               if (tarr.find(tkns[1]) != tarr.end()) {
-                  cv::Mat tmap = cv::imread(scene+"/"+tarr[tkns[1]]+".jpg", CV_LOAD_IMAGE_COLOR);
-                  mesh.tmaps.push_back(tmap);
-                  tval = tcnt++;
-                  // interpolate by point
-                  if (tkns.size()>2 && tkns[2][0] == '?')
-                     tval=-tval-1;
-               }
-               if (tkns.size()>2) {
-                  if (tkns[2][0]=='1')
-                     reft = 1;
-               }
-               break;
-            }
-            case 'v': {
-               mesh.vert.push_back(Vec3d(stod(tkns[1]), stod(tkns[2]), stod(tkns[3])));
-               break;
-            }
-            case 'n': {
-               mesh.norm.push_back(Vec3d(stod(tkns[1]), stod(tkns[2]), stod(tkns[3])));
-               break;
-            }
-            case 't': {
-               mesh.text.push_back(pdd( max(0.0, min(0.99, stod(tkns[1]))) , max(0.0, min(0.99, stod(tkns[2]))) ));
-               break;
-            }
-            case 'f': {
-               vector<int> data;
-               int num;
-               int sz = tkns.size() - 1;
-               for (int j=1; j<=sz; j++) {
-                  vector<string> spc;
-                  boost::split(spc, tkns[j], boost::is_any_of("/"), boost::token_compress_on);
-                  for (int k=0; k<spc.size(); k++)
-                     data.push_back(stoi(spc[k]));
-                  num = spc.size();
-               }
-               // face, normal, texture
-               for (int j=1; j<sz-1; j++) {
-                  Triangle tri(Vec3i(data[0]-1, data[j*num]-1, data[(j+1)*num]-1), Vec3i(-1), Vec3i(-1), tval, reft);
-                  if (num > 2) {
-                     tri.ti = Vec3i(data[1]-1, data[j*num+1]-1, data[(j+1)*num+1]-1);
-                     tri.ni = Vec3i(data[2]-1, data[j*num+2]-1, data[(j+1)*num+2]-1);
-                  }
-                  else
-                     tri.ni = Vec3i(data[1]-1, data[j*num+1]-1, data[(j+1)*num+1]-1);
-                  mesh.tris.push_back(tri);
-                  mesh.cent.push_back((mesh.vert[tri.vi.x]+mesh.vert[tri.vi.y]+mesh.vert[tri.vi.z])/3.0);
-               }
-               break;
-            }
-            default: {
-                continue;
-            }
-         }
-         if (tcnt == -99999) // continue force quit
-            break;
-      }
-      obj.push_back(mesh);
-   }
-}
-
-// KDTree
-#include "kdtree.cpp"
-KDNode* tree = new KDNode();
 int MAX_DEPTH = 1;
+string name; // name of scene
+
+#include "util/reader.cpp"
+#include "util/kdtree.cpp"
+KDNode* tree = new KDNode();
 
 Vec3d temp2;
+// render multiple, global illumnination, ray-bundle tracing options, post-processing
+bool rm = false, gi = false, rb = false, pp = false;
 
+/**
+  Recursive algorithm for ray casting.
+  @param depth depth of recursion
+  @param mclr, mnrm, mhit color at, normal at, and coordinates of intersection
+*/
 Vec3d castRay(Ray &ray, const int depth, Vec3d &mclr, Vec3d &mnrm, Vec3d &mhit) {
    pii tind; pdd uv;
    double tmin = FLT_MAX;
@@ -150,7 +48,6 @@ Vec3d castRay(Ray &ray, const int depth, Vec3d &mclr, Vec3d &mnrm, Vec3d &mhit) 
    int reft;
    obj[tind.first].surfaceProperties(tind.second, ray, uv, nrm, txt, reft);
    hit = ray.src + tmin*ray.dir + 0.0001*nrm;
-   //Vec3d direct = Vec3d();
    Vec3d direct = Vec3d();
    Vec3d ref = Vec3d();
    // Direct Lighting
@@ -180,7 +77,11 @@ Vec3d castRay(Ray &ray, const int depth, Vec3d &mclr, Vec3d &mnrm, Vec3d &mhit) 
    //return txt*obj[tind.first].albedo*direct/M_PI;
 }
 
-// Global Illumination
+/**
+  Compute global illumination via Monte Carlo sampling.
+  @param N num samples
+  @param nrm, hit normal at and position of intersection
+*/
 Vec3d globalIllumination(const int N, Vec3d &nrm, Vec3d &hit) {
    Vec3d Nt, Nb;
    Vec3d indirect = Vec3d(0);
@@ -199,6 +100,14 @@ Vec3d globalIllumination(const int N, Vec3d &nrm, Vec3d &hit) {
    return indirect;
 }
 
+/**
+  Render the image at pixel (i, j). Computes direct lighting and other buffers;
+  then computes global illumination and writes result to image. Option for
+  ray-bundle tracing.
+  @param src ray source (e.g. eye)
+  @param zoom, angle same as camera param; determine view
+  @param i, j coordinates of pixel in image plane
+*/
 Vec3d render(const Vec3d &src, const double zoom, const double angle, int i, int j) {
    Vec3d paint(0);
    // ray-bundle tracing
@@ -207,6 +116,7 @@ Vec3d render(const Vec3d &src, const double zoom, const double angle, int i, int
    int cnt = 0;
    for (y=-0.1; y<=0.1; y+=0.1)
       for (x=-0.1; x<=0.1; x+=0.1) {
+         if (!rb && (x!=0 || y!=0)) continue;
          cnt++;
          Vec3d pxl(0.5-(double)(j+x)/image.rows, 0.5-(double)(i+y)/image.rows, zoom);
          Vec3d snk = Vec3d(src.x+sin(angle)*pxl.x+cos(angle)*pxl.z, src.y+pxl.y, src.z-cos(angle)*pxl.x+sin(angle)*pxl.z);
@@ -216,126 +126,229 @@ Vec3d render(const Vec3d &src, const double zoom, const double angle, int i, int
          else
             paint = paint + castRay(ray, 0, temp2, temp2, temp2);
       }
-   Vec3d direct = paint/9.0;
+   Vec3d direct = paint;
+   if (rb) direct = direct/9.0;
    // Global Illumination
-   int Nsamples = 4;
-   paint = direct+2.0*mclr*globalIllumination(Nsamples, mnrm, mhit)/((double)Nsamples);
+   int Nsamples = 16;
+   paint = direct;
+   if (gi) paint = paint + 2.0*mclr*globalIllumination(Nsamples, mnrm, mhit)/((double)Nsamples);
    return paint;
 }
 
-// Parallel
+/**
+  Parallel implementation using Open_MPI, which creates seperate copies of the
+  program and distributes it to the cores.
+*/
 #include <mpi.h>
+#define MAX_CORES 512+5 // max num of cores, +5 for extra storage
+#define WORKERS 5 // num working cores-1
+int world_size, world_rank; // num processes, rank of process
+#define NUM_ANGLES 16 // num of viewing angles per point on path
+double angles[NUM_ANGLES] = {0, 22.5, 45, 67.5, 90, 112.5, 135, 157.5, 180, 202.5, 225, 247.5, 270, 292.5, 315, 337.5};
+
+/**
+  Create rendering in parallel given parameters
+  @param a, b, c position of rendering in worlld
+  @param view_angle idx of angle used in angles[]
+*/
+void renderParallel(double a, double b, double c, int view_angle) {
+  int process[MAX_CORES]; // processes (rows) assigned to a core; process[0] is num tasks
+  double red[MAX_CORES]; // color buffers updated per process
+  double green[MAX_CORES];
+  double blue[MAX_CORES];
+  double camera[4]; // (x, y, z, angle)
+  if (world_rank == 0) {
+    //cout << "PING: MASTER (0)" << endl;
+    vector<int> parr[MAX_CORES]; // arr for process allocation
+    if (view_angle!=-1) { // for simulateParallel
+      angle = -acos(-unit(Vec3d(a, 0, c)).x);
+      angle += M_PI/180.0*angles[view_angle];
+    }
+    camera[0] = a; camera[1] = b; camera[2] = c; camera[3] = angle;
+    int pc = 0; // = 24 // start node (tj cluster issue)
+    for (int I=0; I<image.rows; I++) {
+      parr[pc].push_back(I);
+      pc++;
+      pc%=WORKERS;
+      //if (pc == 0) pc = 24; //skip cores on same node as master (tj cluster issue)
+    }
+    // send processes
+   for (int A=0; A<WORKERS; A++) {
+      int total = parr[A].size(); // number of processes
+      process[0] = total;
+      for (int B=1; B<=total; B++)
+         process[B] = parr[A][B-1];
+      MPI_Send(&camera, 4, MPI_DOUBLE, A+1, 0, MPI_COMM_WORLD);
+      MPI_Send(&process, MAX_CORES, MPI_INT, A+1, 0, MPI_COMM_WORLD);
+    }
+    // recieve processes results
+    for (int B=0; B<MAX_CORES; B++) { // update color buffers for every task; have to swap b/c MPI_Recv waits on unfinished node
+      for (int A=0; A<WORKERS; A++) {
+         if (B >= parr[A].size()) continue;
+         MPI_Recv(&red, MAX_CORES, MPI_DOUBLE, A+1, 0, MPI_COMM_WORLD, MPI_STATUS_IGNORE);
+         MPI_Recv(&green, MAX_CORES, MPI_DOUBLE, A+1, 0, MPI_COMM_WORLD, MPI_STATUS_IGNORE);
+         MPI_Recv(&blue, MAX_CORES, MPI_DOUBLE, A+1, 0, MPI_COMM_WORLD, MPI_STATUS_IGNORE);
+         for (int k=0; k<image.cols; k++) {
+            cv::Vec3b& color = image.at<cv::Vec3b>(parr[A][B], k);
+            // OpenCV uses BGR
+            color[0] = min(255, (int)(255.0*blue[k]));
+            color[1] = min(255, (int)(255.0*green[k]));
+            color[2] = min(255, (int)(255.0*red[k]));
+          }
+      }
+    }
+  }
+  else {
+    MPI_Recv(&camera, 4, MPI_DOUBLE, 0, 0, MPI_COMM_WORLD, MPI_STATUS_IGNORE);
+    MPI_Recv(&process, MAX_CORES, MPI_INT, 0, 0, MPI_COMM_WORLD, MPI_STATUS_IGNORE);
+    //cout << "PING: WORKER (" << world_rank << ")" << endl;
+    Vec3d eye = Vec3d(camera[0], camera[1], camera[2]);
+    angle = camera[3];
+    for (int A=0; A<process[0]; A++) {
+      int row = process[A+1];
+      for (int J=0; J<image.cols; J++) {
+          Vec3d paint = render(eye, zoom, angle, row, J);
+          red[J] = paint.x;
+          green[J] = paint.y;
+          blue[J] = paint.z;
+      }
+      MPI_Send(&red, MAX_CORES, MPI_DOUBLE, 0, 0, MPI_COMM_WORLD);
+      MPI_Send(&green, MAX_CORES, MPI_DOUBLE, 0, 0, MPI_COMM_WORLD);
+      MPI_Send(&blue, MAX_CORES, MPI_DOUBLE, 0, 0, MPI_COMM_WORLD);
+    }
+  }
+}
+
+/**
+  Render all positions of scene specified in path.txt
+*/
+void renderMultiple() {
+  ifstream fin("scenes/paths/"+name+"path.txt");
+  int N; // num points in path specified in path.txt
+  fin >> N;
+  string line;
+  for (int i=0; i<N; i++) {
+    double a, b, c; // position specified in path.txt
+    fin >> a >> b >> c;
+    vector<string> tkns;
+    boost::split(tkns, line, boost::is_any_of(" "), boost::token_compress_on);
+    for (int j=0; j<NUM_ANGLES; j++) {
+      auto start = std::chrono::high_resolution_clock::now();
+      renderParallel(a, b, c, j);
+      if (world_rank == 0) {
+        auto finish = std::chrono::high_resolution_clock::now();
+        chrono::duration<double> elapsed = finish - start;
+        cout << "Elapsed time: " << elapsed.count() << " s\n";
+        cv::imshow("Frame", image); // change to imwrite and remove waitKey for en masse renderings
+        cv::waitKey(0);
+      }
+    }
+  }
+}
+
+/**
+  Libs to execute python script from c++ code. Used for executing post-processing.
+*/
+#include <stdio.h>
+#include <Python.h>
+
+/**
+  Implementation of free exploration in parallel
+*/
+void simulateParallel() {
+  if (pp) Py_Initialize();
+  while(true) {
+    if (pp) { // with post-processing
+      auto start = std::chrono::high_resolution_clock::now();
+      // render and save diffuse as auxiliary buffer for denoising model
+      gi = false;
+      renderParallel(eye.x, eye.y, eye.z, -1);
+      if (world_rank == 0) cv::imwrite("demo/diffuse.png", image);
+      gi = true;
+      renderParallel(eye.x, eye.y, eye.z, -1);
+      if (world_rank == 0) {
+        cv::imwrite("demo/noisy_"+name+".png", image);
+        auto finish = std::chrono::high_resolution_clock::now();
+        chrono::duration<double> elapsed = finish - start;
+        // run ml models
+        char filename[] = "demo.py";
+	      FILE* fp;
+	      fp = _Py_fopen(filename, "r"); // denoise and apply superresolution
+        PyRun_SimpleFile(fp, filename);
+        cout << "Elapsed time: " << elapsed.count() << " s\n";
+        cv::Mat display = cv::imread("demo/res.png");
+        cv::imshow("Frame", display);
+      }
+    }
+    else { // traditional parallel free exploration
+      auto start = std::chrono::high_resolution_clock::now();
+      renderParallel(eye.x, eye.y, eye.z, -1);
+      if (world_rank == 0) {
+        auto finish = std::chrono::high_resolution_clock::now();
+        chrono::duration<double> elapsed = finish - start;
+        cout << "Elapsed time: " << elapsed.count() << " s\n";
+        cv::imshow("Frame", image);
+        cv::waitKey(0);
+      }
+    }
+    // movement
+    if (world_rank == 0) {
+      int c = cv::waitKey(0);
+      switch(c) {
+        case 119: { // W
+           eye = eye+Vec3d(cos(angle)*step, 0, sin(angle)*step);
+           break;
+        }
+        case 97: { // A
+           eye = eye-Vec3d(-sin(angle)*step, 0, cos(angle)*step);
+           break;
+        }
+        case 115: { // S
+           eye = eye-Vec3d(cos(angle)*step, 0, sin(angle)*step);
+           break;
+        }
+        case 100: { // D
+           eye = eye+Vec3d(-sin(angle)*step, 0, cos(angle)*step);
+           break;
+        }
+        case 2: { // LEFT
+           angle-=astep;
+           break;
+        }
+        case 3: { // RIGHT
+           angle+=astep;
+           break;
+        }
+      }
+    }
+  }
+  if (pp) Py_Finalize();
+}
 
 int main(int argc, char** argv) {
-   string name = "cbox";
-   init(name);
-   buildTree(tree);
-   int c = 0, sumT = 0;
-   for (int i=0; i<obj.size(); i++)
-      sumT+=obj[i].tris.size();
-
-   //MPI_Init(NULL, NULL);
-   MPI_Init(&argc, &argv);
-   int world_size, world_rank;
-   MPI_Comm_size(MPI_COMM_WORLD, &world_size);
-   MPI_Comm_rank(MPI_COMM_WORLD, &world_rank);
-   srand(world_rank);
-   //cout << "Process "+to_string(world_rank)+" read triangles: " << sumT << endl;
-
-   double red[512];
-   double green[512];
-   double blue[512];
-   int process[513]; // 1 extra for size
-   double camera[4];
-   int slaves = 1;
-   if (world_rank == 0) {
-      ifstream fin("cboxpath.txt");
-      int N;
-      fin >> N;
-      int cnt = 0;
-      string line;
-      //double angles[16] = {0, 10, 20, 30, 45, 60, 75, 90, 180, -90, -75, -60, -45, -30, -20, -10};
-      double angles[16] = {0, 22.5, 45, 67.5, 90, 112.5, 135, 157.5, 180, 202.5, 225, 247.5, 270, 292.5, 315, 337.5};
-      for (int i=0; i<N; i++) {
-         double a, b, c;
-         fin >> a >> b >> c;
-         vector<string> tkns;
-         boost::split(tkns, line, boost::is_any_of(" "), boost::token_compress_on);
-         for (int j=0; j<16; j++) {
-            // arr for process allocation
-            cout << cnt << endl;
-            cnt++;
-            vector<int> parr[512];
-            angle = -acos(-unit(Vec3d(a, 0, c)).x);
-            angle += 0.01745329251*angles[j];
-            camera[0] = a; camera[1] = b; camera[2] = c; camera[3] = angle;
-            int pc = 0; //skip cores on same node as master
-            // allocate work by rows
-            for (int I=0; I<image.rows; I++) {
-               parr[pc].push_back(I);
-               pc++;
-               pc%=slaves;
-               //if (pc == 0) pc = 24;
-            }
-            // send work
-            for (int A=0; A<slaves; A++) {
-               int total = parr[A].size();
-               // first one denotes size
-               process[0] = total;
-               for (int B=1; B<=total; B++)
-                  process[B] = parr[A][B-1]; // j starts at 1 but parr vector starts at 0
-               MPI_Send(&camera, 4, MPI_DOUBLE, A+1, 0, MPI_COMM_WORLD);
-               MPI_Send(&process, 513, MPI_INT, A+1, 0, MPI_COMM_WORLD);
-            }
-            // recieve work
-            for (int A=0; A<slaves; A++) {
-               for (int B=0; B<parr[A].size(); B++) { // update row buffers according to parr (processes)
-                  MPI_Recv(&red, 512, MPI_DOUBLE, A+1, 0, MPI_COMM_WORLD, MPI_STATUS_IGNORE);
-                  MPI_Recv(&green, 512, MPI_DOUBLE, A+1, 0, MPI_COMM_WORLD, MPI_STATUS_IGNORE);
-                  MPI_Recv(&blue, 512, MPI_DOUBLE, A+1, 0, MPI_COMM_WORLD, MPI_STATUS_IGNORE);
-		            for (int k=0; k<image.cols; k++) {
-                     cv::Vec3b& color = image.at<cv::Vec3b>(parr[A][B], k);
-                     // OpenCV uses BGR
-                     color[0] = min(255, (int)(255.0*blue[k]));
-                     color[1] = min(255, (int)(255.0*green[k]));
-                     color[2] = min(255, (int)(255.0*red[k]));
-                  }
-               }
-	         }
-            cv::imshow("TEST", image);
-            cv::waitKey(0);
-            //cv::imwrite("CBOXDATA/"+name+to_string(cnt-1)+".jpg", image);
-         }
-      }
-   }
-   else {
-      int NN = 20;
-      int cnt = 0;
-      for (int i=0; i<NN; i++) {
-         for (int j=0; j<16; j++) {
-            cnt++;
-            MPI_Recv(&camera, 4, MPI_DOUBLE, 0, 0, MPI_COMM_WORLD, MPI_STATUS_IGNORE);
-            MPI_Recv(&process, 513, MPI_INT, 0, 0, MPI_COMM_WORLD, MPI_STATUS_IGNORE);
-            Vec3d eye = Vec3d(camera[0], camera[1], camera[2]);
-            angle = camera[3];
-            //cout << "PING: " << world_rank << endl;
-            for (int A=0; A<process[0]; A++) {
-               int row = process[A+1];
-               for (int J=0; J<image.cols; J++) {
-                  Vec3d paint = render(eye, zoom, angle, row, J);
-                  red[J] = paint.x;
-                  green[J] = paint.y;
-                  blue[J] = paint.z;
-               }
-               MPI_Send(&red, 512, MPI_DOUBLE, 0, 0, MPI_COMM_WORLD);
-               MPI_Send(&green, 512, MPI_DOUBLE, 0, 0, MPI_COMM_WORLD);
-               MPI_Send(&blue, 512, MPI_DOUBLE, 0, 0, MPI_COMM_WORLD);
-               //cout << world_rank << ' ' << row << endl;
-            }
-         }
-      }
-      //cout << "PROCESS DONE: " << world_rank << endl;
-   }
-   MPI_Finalize();
-   return 0;
+  // process terminal args
+  for (int i=1; i<argc; i++) {
+    string in = string(argv[i]);
+    if (in=="-rm") rm = true;
+    if (in=="-gi") gi = true;
+    if (in=="-rb") rb = true;
+    if (in=="-pp") pp = true;
+    if (in[0]!='-') name = in;
+  }
+  init("scenes/"+name);
+  buildTree(tree);
+  int c = 0, sumT = 0;
+  for (int i=0; i<obj.size(); i++)
+    sumT+=obj[i].tris.size();
+  // MPI
+  MPI_Init(&argc, &argv);
+  MPI_Comm_size(MPI_COMM_WORLD, &world_size);
+  MPI_Comm_rank(MPI_COMM_WORLD, &world_rank);
+  if (world_rank == 0) {
+    cout << "Real Triangles: " << sumT << "; Naive: " << sum << "; Optimized: " << sum2 << endl;
+    cout << "World Size: " << world_size << endl;
+  }
+  if (rm) renderMultiple();
+  else simulateParallel();
+  MPI_Finalize();
 }

@@ -1,11 +1,32 @@
+/**
+  kdtree.cpp defines KDNode, geometrically a Box, and contains pointers to two
+  KDNode children as well as other supplemental info. It also defines build and
+  search methods, implemented with our proposed optimizations.
+
+  @author George Tang
+*/
+
+/**
+  @const LEAF max amount of triangles in leaf node
+  pms macro for polygonMesh idx
+  trg macro for triangle idx in pms
+*/
 #define LEAF 3
 #define pms ind[i].first
 #define trg ind[i].second
 
+/**
+  Box is the geometric representation of KDNode
+*/
 class Box {
 public:
-   Vec3d bnds[2];
+   Vec3d bnds[2]; //two points define a volume
 
+   /**
+    Fast ray-box intersection test
+    @param ent enter distance
+    @param ext exit distance
+   */
    bool intersect(Ray &ray, double &ent, double &ext) {
       double tmin, tmax, ymin, ymax, zmin, zmax;
       tmin = (bnds[ray.sign[0]].x - ray.src.x)*ray.inv.x;
@@ -27,36 +48,46 @@ public:
       return true;
    }
 
+   /**
+     Computes and returns box surface area
+   */
    double surfaceArea() {
-      double l = bnds[1].x - bnds[0].x;
-      double w = bnds[1].y - bnds[0].y;
-      double h = bnds[1].z - bnds[0].z;
-      return 2.0*(l*w+w*h+l*h);
+     double l = bnds[1].x - bnds[0].x;
+     double w = bnds[1].y - bnds[0].y;
+     double h = bnds[1].z - bnds[0].z;
+     return 2.0*(l*w+w*h+l*h);
    }
 };
 
-// Stats
-int tris = 0;
-int sum = 0;
-int sum2 = 0;
+// Stats for proposed optimization
+int tris = 0; // num triangles
+int sum = 0; // naive num build/search triangles
+int sum2 = 0; // optimized num build/search triangles
 
-// SAH
+// Surface Area Heuristic (SAH) Parameters
 double trav = 5.0;
 double inst = 5.0;
 
+/**
+  KD Node
+*/
 class KDNode {
 public:
-   Box box;
-   int axis;
-   double splt;
-   bool leaf;
-   KDNode *left, *right;
-   vector<pii> ind; // Mesh, Triangle
+   Box box; // geometric representation
+   int axis; // split axis
+   double splt; // split coordinate
+   bool leaf; // is leaf?
+   KDNode *left, *right; // children
+   vector<pii> ind; // vector of (Mesh idx, Triangle idx)
    KDNode(): leaf(false) {}
 
+   /**
+     Recursive build is implemented with SAH and proposed optimization
+     @param depth is current depth of build dfs
+   */
    void build(const int depth) {
       if (ind.size()<=LEAF) {
-         sum+=ind.size();
+         sum += ind.size();
          leaf = true;
          return;
       }
@@ -68,12 +99,10 @@ public:
       for (int i=0; i<ind.size(); i++)
          pnts.push_back(obj[pms].cent[trg]);
       sort(pnts.begin(), pnts.end(), func[axis]);
-      // Naive Median
-      //splt = pnts[pnts.size()/2][axis];
       // Update bounding box
       copy(begin(box.bnds), end(box.bnds), begin(left->box.bnds));
       copy(begin(box.bnds), end(box.bnds), begin(right->box.bnds));
-      // SA Heuristic
+      // SAH implementation
       double minv = DBL_MAX;
       double curr, cost;
       double sa = box.surfaceArea();
@@ -98,7 +127,7 @@ public:
       }
       left->box.bnds[1][axis] = splt;
       right->box.bnds[0][axis] = splt;
-      // Assign triangles based on locations of vert relative to splt
+      // Assign triangles based on locations of vertex relative to splt
       for (int i=0; i<ind.size(); i++) {
          Vec3i V = obj[pms].tris[trg].vi;
          bool l = false, r = false;
@@ -110,7 +139,7 @@ public:
          if (l) left->ind.push_back(ind[i]);
          if (r) right->ind.push_back(ind[i]);
       }
-      // if centers are the same
+      // if centers are the same, merge
       if (max(left->ind.size(), right->ind.size()) == ind.size()) {
          sum += ind.size();
          leaf = true;
@@ -120,8 +149,8 @@ public:
       }
       left->build(depth+1);
       right->build(depth+1);
-      /*
-      // pull up
+
+      // pull up (proposed optimization component): merge common triangles between children
       vector<pii> ls;
       set<pii> rs;
       for (int i=0; i<left->ind.size(); i++)
@@ -140,9 +169,14 @@ public:
             left->ind.push_back(ls[i]);
       right->ind = vector<pii>(rs.begin(), rs.end());
       sum2 += left->ind.size() + right->ind.size();
-      */
    }
 
+   /**
+     Search for closest intersecting triangle in KDNode
+     @param tind optimal triangle
+     @param tmin distance to optimal triangle
+     @param barycentric coordinates of intersection
+   */
    bool searchNode(Ray &ray, pii &tind, double &tmin, pdd &uv) {
       bool found = false;
       if (ind.size() > 0) {
@@ -161,34 +195,11 @@ public:
       }
       return found;
    }
-
-   bool search(Ray &ray, pii &tind, double &tmin, pdd &uv) {
-      double ent, ext;
-      if (!box.intersect(ray, ent, ext))
-         return false;
-      bool found = searchNode(ray, tind, tmin, uv);
-      if (leaf)
-         return found;
-      Vec3d hit = ray.src+tmin*ray.dir;
-      if (ray.src[axis] <= splt) {
-         if (found && hit>=left->box.bnds[0] && hit<=left->box.bnds[1])
-            return left->search(ray, tind, tmin, uv) || found;
-         return left->search(ray, tind, tmin, uv) || right->search(ray, tind, tmin, uv) || found;
-      }
-      if (found && hit>=right->box.bnds[0] && hit<=right->box.bnds[1])
-         return right->search(ray, tind, tmin, uv) || found;
-      return right->search(ray, tind, tmin, uv) || left->search(ray, tind, tmin, uv) || found;
-      /*
-      if (leaf)
-         return searchNode(ray, tind, tmin, uv);
-      if (ray.src[axis] <= splt)
-         return left->search(ray, tind, tmin, uv) || right->search(ray, tind, tmin, uv);
-      return right->search(ray, tind, tmin, uv) || left->search(ray, tind, tmin, uv);
-      */
-   }
 };
 
-// Recursive Algorithm to minimize ray-box intersections
+/**
+  Block datatype used for search dfs. Contains reference to KDNode and ent, ext distances.
+*/
 class Block {
 public:
    KDNode *node;
@@ -196,6 +207,12 @@ public:
    Block(KDNode *node, const double ent, const double ext): node(node), ent(ent), ext(ext) {}
 };
 
+/**
+  Recursive search performs a dfs through KDNodes to find node with optimal triangle.
+  Implements early break (proposed optimization component): if triangle already
+  found is better than dfs branch we entered, return
+  @param root current node
+*/
 bool search(KDNode *root, Ray &ray, pii &tind, double &tmin, pdd &uv) {
    double ent, ext, s, tdir, tmid;
    int a;
@@ -211,9 +228,9 @@ bool search(KDNode *root, Ray &ray, pii &tind, double &tmin, pdd &uv) {
       stk.pop();
       curr = b.node;
       ent = b.ent; ext = b.ext;
-      //if (ent >= tmin) break;
+      if (ent >= tmin) break; // comment
       while(!curr->leaf) {
-         //found |= curr->searchNode(ray, tind, tmin, uv);
+         found |= curr->searchNode(ray, tind, tmin, uv); // comment
          s = curr->splt;
          a = curr->axis;
          tdir = ray.dir[a] == 0 ? 0.0000001 : ray.dir[a];
@@ -223,23 +240,25 @@ bool search(KDNode *root, Ray &ray, pii &tind, double &tmin, pdd &uv) {
             swap(near, far);
          if (tmid >= ext || tmid < 0)
             curr = near;
-         else if (tmid <= ent )//&& tmid <= tmin)
+         else if (tmid <= ent && tmid <= tmin) // comment after &&
             curr = far;
          else {
-            //if (tmid <= tmin)
+            if (tmid <= tmin) // comment
                stk.push(Block(far, tmid, ext));
             curr = near;
             ext = tmid;
          }
       }
       bool temp = curr->searchNode(ray, tind, tmin, uv);
-      if (temp) return true;
-      //if (found) return true;
+      if (temp) return true; // proposed algorithm in project.pdf ends here
+      //if (found) return true; // error; note other nodes later in dfs can have optimal solution; please verify
    }
    return found;
 }
 
-// Construct Tree
+/**
+  Build root KDNode
+*/
 void buildTree(KDNode* root) {
    vector<pii> v;
    for (int i=0; i<obj.size(); i++) {

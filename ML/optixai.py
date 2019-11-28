@@ -122,7 +122,7 @@ def SSIM(y_true, y_pred):
     c1 = 0.01**2
     c2 = 0.03**2
     ssim = (2*ux*uy+c1)*(2*K.sqrt(varx)*K.sqrt(vary)+c2)
-    denom =(ux**2+uy**2+c1)*(varx+vary+c2)
+    denom = (ux**2+uy**2+c1)*(varx+vary+c2)
     return ssim/K.clip(denom, K.epsilon(), np.inf)
 
 def trainModel(model):

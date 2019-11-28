@@ -1,5 +1,5 @@
 # x, y, z, step, astep, angle, zoom
-C 500 200 -50 50 90 0 1.0
+C -100 300 -50 50 90 0 1.0
 O sponza2.txt
 # type, light, pos, RGB values
 L p 0 400 0 1 1 1 35000

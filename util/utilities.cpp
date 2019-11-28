@@ -1,32 +1,11 @@
-// C
-#include <stdlib.h>
-#include <stdio.h>
-#include <cfloat>
-#include <cmath>
-#include <cstdlib>
-#include <ctime>
+/**
+  utilities.cpp contains the libraries used, aliases, data structures and vector
+  algebra operations needed for raytracing, and other support methods.
 
-// C++
-#include <algorithm>
-#include <chrono>
-#include <deque>
-#include <fstream>
-#include <iostream>
-#include <iterator>
-#include <limits>
-#include <map>
-#include <queue>
-#include <random>
-#include <set>
-#include <sstream>
-#include <stack>
-#include <string>
-#include <vector>
-#include <unordered_map>
-#include <unordered_set>
-#include <utility>
+  @author George Tang
+*/
 
-// Other
+#include <bits/stdc++.h>
 #include <opencv2/opencv.hpp>
 #include <boost/algorithm/string/classification.hpp>
 #include <boost/algorithm/string/split.hpp>
@@ -41,6 +20,9 @@ typedef pair<ll, ll> plll;
 typedef pair<float, float> pff;
 typedef pair<double, double> pdd;
 
+/**
+  3-dim vector and its operations
+*/
 template<typename T> struct Vec3 {
    T x, y, z;
    Vec3(): x(0), y(0), z(0) {}
@@ -69,7 +51,7 @@ template <typename T> bool zcmp(const Vec3<T> &u, const Vec3<T> &v) {
    return u.z < v.z;
 }
 
-bool(*func[3])(const Vec3d &, const Vec3d &) = {xcmp, ycmp, zcmp};
+bool(*func[3])(const Vec3d &, const Vec3d &) = {xcmp, ycmp, zcmp}; // arr of function pointers
 
 template<typename T> void print(const Vec3<T> &u) {
    cout << u.x << ' ' << u.y << ' ' << u.z << ' ';
@@ -127,6 +109,9 @@ template<typename T> bool operator>=(const Vec3<T> &u, const Vec3<T> &v) {
    return u.x >= v.x && u.y >= v.y && u.z >= v.z;
 }
 
+/**
+  vector algebra methods
+*/
 template<typename T> double len(const Vec3<T> &u) {
    return sqrt(u.x*u.x + u.y*u.y + u.z*u.z);
 }
@@ -144,6 +129,9 @@ template<typename T> Vec3<T> cross(const Vec3<T> &u, const Vec3<T> &v) {
    return Vec3<T>(u.y*v.z-u.z*v.y, u.z*v.x-u.x*v.z, u.x*v.y-u.y*v.x);
 }
 
+/**
+  physics phenomena
+*/
 template<typename T> Vec3<T> reflect(const Vec3<T> &u, const Vec3<T> &n) {
    return u - 2*dot(u, n)*n;
 }
