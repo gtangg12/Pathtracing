@@ -4,7 +4,7 @@
   data for Precision Graphics), as well as parallel implementation of free exploration.
   Does not support buffers.
 
-  Note: use mpirun ./mainOMP to run.
+  Note: use mpirun ./mainOMP ... [arguments]... to run.
 */
 #include "util/utilities.cpp"
 #include "util/polygonMesh.cpp"
