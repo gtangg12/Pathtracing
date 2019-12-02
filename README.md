@@ -34,10 +34,12 @@ make
 ```
 
 ### Running Demo
-There are two demos: main (runs in serial) and mainOMP (runs in parallel on multiple cores). Both allow you to explore the scene with WASD to move and left/right arrow to turn. Each on has a set of options that can be enabled with optional arguments:
+There are two demos: main (runs in serial) and mainOMP (runs in parallel on multiple cores). Both allow you to explore the scene with WASD to move and left/right arrow to turn. Each on has a set of options that can be enabled with optional arguments.
 
 ```
 ./main [scene] -gi -rb
+```
+```
 mpirun ./mainOMP [scene] -gi -rb -rm -pp
 ```
 
