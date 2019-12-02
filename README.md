@@ -48,7 +48,7 @@ where [scene] is a placeholder for the available scenes: cbox, car, room, or spo
 ```
 -gi global illumination
 -rb ray-bundle tracing
--rm render multiple view as specified in scenepath.txt (alternative to free exploration)
+-rm render multiple views as specified in scenepath.txt (alternative to free exploration)
 -pp ai post-processing
 ```
 
@@ -63,17 +63,18 @@ and dividing by 2 (each core has two threads, which shows up as 'virtual' cores)
 ## Project Outline
 
 ### main.cpp
-
+Serial implementation of pathtracer. 
 
 ### mainOMP.cpp
-
+Parallel implementationn of pathtracer that supports more functionalities than serial version.
 
 ### util
-
+Contains supporting code for pathtracer.
 
 ### scenes
-
+Contains scene information and paths, which is used to specify rendering path for rendering multiple option. 
 
 ### ml
+Contains machine learning code and models for denoising and superresolution.
 
 
