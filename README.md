@@ -1,5 +1,5 @@
 # Towards Realtime Monte Carlo Pathtracing on a Single CPU
-
+We propose a pipeline that allows interactive pathtracing without a GPU. We implement a pathtracer in serial that supports global illumination and ray-bundle tracing as well as a seperate version in parallel that supports global illumination, ray-bundle tracing, and distruted rendering of multiple views in succession (for data generation). The build/search algorithms of the KD-Tree (acceleration structure) are improved to yeild a 40% speed increase and 30% memory usage decrease. A lightweight denoising and a lightweight superresolution network are trained on a scene-by-scene basis to improve the quality of low-ray budget global illumination renderings and integrated into the pipline as post-processing. Currently four scenes are supported by the pipeline: cbox, car, room, and sponza, and they can be run in the demo below. Our pipeline's renderings are very similiar to those produced by pathtracing only, and the total time is improved by 1000-5000x.
 
 
 ## Getting Started
