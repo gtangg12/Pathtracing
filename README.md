@@ -66,7 +66,7 @@ and dividing by 2 (each core has two threads, which shows up as 'virtual' cores)
 Serial implementation of pathtracer. 
 
 ### mainOMP.cpp
-Parallel implementationn of pathtracer that supports more functionalities than serial version.
+Parallel implementation of pathtracer that supports more functionalities than serial version.
 
 ### util
 Contains supporting code for pathtracer.
