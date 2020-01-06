@@ -152,20 +152,20 @@ double angles[NUM_ANGLES] = {0, 22.5, 45, 67.5, 90, 112.5, 135, 157.5, 180, 202.
    @param view_angle idx of angle used in angles[]
  */
 void renderParallel(double a, double b, double c, int view_angle) {
-	int process[MAX_CORES]; // processes (rows) assigned to a core; process[0] is num tasks
-	double red[MAX_CORES]; // color buffers updated per process
+	int process[MAX_CORES];     // processes (rows) assigned to a core; process[0] is num tasks
+	double red[MAX_CORES];     // color buffers updated per process
 	double green[MAX_CORES];
 	double blue[MAX_CORES];
-	double camera[4]; // (x, y, z, angle)
+	double camera[4];     // (x, y, z, angle)
 	if (world_rank == 0) {
 		// cout << "PING: MASTER (0)" << endl;
-		vector<int> parr[MAX_CORES]; // arr for process allocation
-		if (view_angle != -1) { // for simulateParallel
+		vector<int> parr[MAX_CORES];         // arr for process allocation
+		if (view_angle != -1) {         // for simulateParallel
 			angle = -acos(-unit(Vec3d(a, 0, c)).x);
 			angle += M_PI/180.0*angles[view_angle];
 		}
 		camera[0] = a; camera[1] = b; camera[2] = c; camera[3] = angle;
-		int pc = 0; // = 24 // start node (tj cluster issue)
+		int pc = 0;         // = 24 // start node (tj cluster issue)
 		for (int I = 0; I < image.rows; I++) {
 			parr[pc].push_back(I);
 			pc++;
@@ -174,7 +174,7 @@ void renderParallel(double a, double b, double c, int view_angle) {
 		}
 		// send processes
 		for (int A = 0; A < WORKERS; A++) {
-			int total = parr[A].size(); // number of processes
+			int total = parr[A].size();             // number of processes
 			process[0] = total;
 			for (int B = 1; B <= total; B++)
 				process[B] = parr[A][B-1];
@@ -182,7 +182,7 @@ void renderParallel(double a, double b, double c, int view_angle) {
 			MPI_Send(&process, MAX_CORES, MPI_INT, A+1, 0, MPI_COMM_WORLD);
 		}
 		// recieve processes results
-		for (int B = 0; B < MAX_CORES; B++) { // update color buffers for every task; have to swap b/c MPI_Recv waits on unfinished node
+		for (int B = 0; B < MAX_CORES; B++) {         // update color buffers for every task; have to swap b/c MPI_Recv waits on unfinished node
 			for (int A = 0; A < WORKERS; A++) {
 				if (B >= parr[A].size()) continue;
 				MPI_Recv(&red, MAX_CORES, MPI_DOUBLE, A+1, 0, MPI_COMM_WORLD, MPI_STATUS_IGNORE);
@@ -224,11 +224,11 @@ void renderParallel(double a, double b, double c, int view_angle) {
  */
 void renderMultiple() {
 	ifstream fin("scenes/paths/"+name+"path.txt");
-	int N; // num points in path specified in path.txt
+	int N;     // num points in path specified in path.txt
 	fin >> N;
 	string line;
 	for (int i = 0; i < N; i++) {
-		double a, b, c; // position specified in path.txt
+		double a, b, c;         // position specified in path.txt
 		fin >> a >> b >> c;
 		vector<string> tkns;
 		boost::split(tkns, line, boost::is_any_of(" "), boost::token_compress_on);
@@ -239,7 +239,7 @@ void renderMultiple() {
 				auto finish = std::chrono::high_resolution_clock::now();
 				chrono::duration<double> elapsed = finish - start;
 				cout << "Elapsed time: " << elapsed.count() << " s\n";
-				cv::imshow("Frame", image); // change to imwrite and remove waitKey for en masse renderings
+				cv::imshow("Frame", image);                 // change to imwrite and remove waitKey for en masse renderings
 				cv::waitKey(0);
 			}
 		}
@@ -258,7 +258,7 @@ void renderMultiple() {
 void simulateParallel() {
 	if (pp) Py_Initialize();
 	while(true) {
-		if (pp) { // with post-processing
+		if (pp) {         // with post-processing
 			auto start = std::chrono::high_resolution_clock::now();
 			// render and save diffuse as auxiliary buffer for denoising model
 			gi = false;
@@ -273,14 +273,14 @@ void simulateParallel() {
 				// run ml models
 				char filename[] = "demo.py";
 				FILE* fp;
-				fp = _Py_fopen(filename, "r"); // denoise and apply superresolution
+				fp = _Py_fopen(filename, "r");                 // denoise and apply superresolution
 				PyRun_SimpleFile(fp, filename);
 				cout << "Elapsed time: " << elapsed.count() << " s\n";
 				cv::Mat display = cv::imread("demo/res.png");
 				cv::imshow("Frame", display);
 			}
 		}
-		else { // traditional parallel free exploration
+		else {         // traditional parallel free exploration
 			auto start = std::chrono::high_resolution_clock::now();
 			renderParallel(eye.x, eye.y, eye.z, -1);
 			if (world_rank == 0) {
@@ -295,27 +295,27 @@ void simulateParallel() {
 		if (world_rank == 0) {
 			int c = cv::waitKey(0);
 			switch(c) {
-				case 119: { // W
+				case 119: {                 // W
 					eye = eye+Vec3d(cos(angle)*step, 0, sin(angle)*step);
 					break;
 				}
-				case 97: { // A
+				case 97: {                 // A
 					eye = eye-Vec3d(-sin(angle)*step, 0, cos(angle)*step);
 					break;
 				}
-				case 115: { // S
+				case 115: {                 // S
 					eye = eye-Vec3d(cos(angle)*step, 0, sin(angle)*step);
 					break;
 				}
-				case 100: { // D
+				case 100: {                 // D
 					eye = eye+Vec3d(-sin(angle)*step, 0, cos(angle)*step);
 					break;
 				}
-				case 2: { // LEFT
+				case 2: {                 // LEFT
 					angle -= astep;
 					break;
 				}
-				case 3: { // RIGHT
+				case 3: {                 // RIGHT
 					angle += astep;
 					break;
 				}
